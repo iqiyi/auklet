@@ -1,0 +1,13 @@
+# pack-refs with: peeled fully-peeled 
+e0496a633dd2c276463484b256d3f5f8b17406b7 refs/remotes/origin/histograms
+84a0874d448f1ab90a78962fb906d44773dc796e refs/remotes/origin/jeromefroe/http/add-http-endpoint
+e80571313322ebc28baf0ed6c5f3a996d86157a2 refs/remotes/origin/m3-reporter
+88e9c75b0cfc84139ad1bae3b7f123786cfd0770 refs/remotes/origin/master
+94ad8100b9b996d19cac62d2381b5a72e16ec62a refs/tags/v1.0.0
+^08e86c3c1eb55364d563bd6beb982040225f4bb7
+43c1379c0577ac1eb74f9f3869cea07191c9992b refs/tags/v1.1.0
+58c90d19d305abc44b0c81bd6c8343468cae4c3f refs/tags/v2.0.0
+34be4a565ce6286a0ba91a54a81be3f6181ca2e2 refs/tags/v2.1.0
+4b9d9de43ffcb0b7efe67dab2a92c2d58dbf16ab refs/tags/v3.0.0
+e9b601813b0be4771b1b3995390567b67ab2b3fc refs/tags/v3.0.1
+88e9c75b0cfc84139ad1bae3b7f123786cfd0770 refs/tags/v3.0.2

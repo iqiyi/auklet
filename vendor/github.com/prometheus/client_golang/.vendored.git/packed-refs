@@ -1,0 +1,17 @@
+# pack-refs with: peeled fully-peeled 
+e04de4bfe3052a7c7099366931841c084ef7e263 refs/remotes/origin/beorn7/doc
+b0be2a1c210191cd76dde6bfe1c1263472f99c9a refs/remotes/origin/beorn7/next
+70693bc2975db2fd288d10d7f03fa7a074fa7179 refs/remotes/origin/grobie/update-graphite-exposition
+310ce84375bb84c5cbbf0d05069c92daa5673740 refs/remotes/origin/master
+1ba5ec2439aae6ca02859bdf7885ac13d4b0a355 refs/remotes/origin/proto3
+17f6046068abc0e2b4b4144c71d563b2d18c06d3 refs/remotes/origin/stn/handler-instrumentation
+88b6ea5852dda9f054a8a410595552ebf67368c9 refs/tags/0.1.0
+39e4bc83f974fb141a9e67c042b26322bacc917b refs/tags/0.2.0
+dbbb6c9e1dbb3bf19d0f9a61baa852cbfcee1896 refs/tags/0.3.0
+f688948916633c167d810a9548d4b775da43b0b0 refs/tags/0.3.1
+1cf6d4b964951c63779ba7513c57fe389b609014 refs/tags/0.3.2
+97d2bf50bf6557817a4b7bdfb7015aaee5c4ba81 refs/tags/0.4.0
+b0bd7e1be33327b85cb4853e7011156e3cedd657 refs/tags/0.5.0
+e319516b0f97867d36151451cab8d4aefbe1786b refs/tags/0.6.0
+6dbab8106ed3ed77359ac85d9cf08e30290df864 refs/tags/0.7.0
+c5b7fccd204277076155f10851dad72b76a49317 refs/tags/v0.8.0

@@ -1,0 +1,6 @@
+* Systemd wrapper for pack replicator/auditor
+* Stat reporter for replicator/auditor
+* Enable CI
+* Doc for Debian/Ubuntu platform
+* Detail of design doc
+* APM

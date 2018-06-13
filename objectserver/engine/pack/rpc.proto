@@ -1,0 +1,75 @@
+// Copyright (c) 2016-2018 iQIYI.com.  All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package pack;
+
+service PackRpcService{   
+    rpc ListPartitionSuffixes(Partition) returns (PartitionSuffixesReply) {}
+    rpc GetHashes(SuffixHashesMsg) returns (SuffixHashesReply) {}
+    rpc Sync(SyncMsg) returns (SyncReply) {}
+    rpc DeleteHandoff(Partition) returns (PartitionDeletionReply) {}
+    rpc AuditPartition(Partition) returns (PartitionAuditionReply) {}
+}
+
+message Partition {
+    string device = 1;
+    uint32 policy = 2;
+    string partition = 3;
+}
+
+message PartitionSuffixesReply {
+    repeated string suffixes = 1;
+}
+
+message SuffixHashesMsg {
+    string device = 1;
+    uint32 policy = 2;
+    string partition = 3;
+    repeated string recalculate = 4;
+    bool listDir = 5;
+    uint64 reclaimAge = 6;
+}
+
+message SuffixHashesReply{
+    int64 hashed = 1;
+    map<string, string> hashes = 2;
+}
+
+message SyncMsg {
+    string localDevice = 1;
+    string host = 2;
+    int32  port = 3;
+    string device = 4;
+    uint32 policy = 5;
+    string partition = 6;
+    repeated string suffixes = 7;
+}
+
+message SyncReply {
+    bool success = 1;
+    map<string, string> candidates = 2;
+}
+
+message PartitionDeletionReply {
+    bool success = 1;
+}
+
+message PartitionAuditionReply {
+    int64 processedBytes = 1;
+    int64 processedFiles = 2;
+    int64 quarantines = 3;
+    int64 errors = 4;
+}

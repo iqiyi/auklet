@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package pack;
+
+message ObjectMeta {
+    string name = 1;
+    string timestamp = 2;
+    int64 dataSize = 3;
+    map<string, string> systemMeta = 4;
+    map<string, string> userMeta = 5;
+}
+
+message NeedleIndex {
+    int64 offset = 1;
+    int64 size = 2;
+    int64 dataOffset= 3;
+    int64 dataSize = 4;
+    int64 metaOffset = 5;
+    int32 metaSize = 6;
+}
+
+message DBIndex {
+    NeedleIndex index = 1;
+    ObjectMeta meta = 2;
+}
+
+message ObjectTimestamps {
+    string dataTimestamp = 1;
+    string metaTimestamp = 2;
+}
+
+message CheckedObjects {
+    map<string, ObjectTimestamps> objects = 1;
+}
+
+message WantedParts {
+    bool data = 1;
+    bool meta = 2;
+}
+
+message WantedObjects {
+    map<string, WantedParts> objects = 1;
+}

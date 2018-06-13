@@ -1,0 +1,93 @@
+diff -Naur /usr/src/swift-2.3.1.dev12/swift/common/storage_policy.py /usr/src/swift-2.3.1.dev13/swift/common/storage_policy.py
+--- /usr/src/swift-2.3.1.dev12/swift/common/storage_policy.py	2018-05-26 11:35:30.000000000 +0000
++++ /usr/src/swift-2.3.1.dev13/swift/common/storage_policy.py	2018-05-26 11:22:41.000000000 +0000
+@@ -24,9 +24,12 @@
+ LEGACY_POLICY_NAME = 'Policy-0'
+ VALID_CHARS = '-' + string.letters + string.digits
+ 
++PACK_POLICY = 'pack'
++
+ DEFAULT_POLICY_TYPE = REPL_POLICY = 'replication'
+ EC_POLICY = 'erasure_coding'
+ 
++
+ DEFAULT_EC_OBJECT_SEGMENT_SIZE = 1048576
+ 
+ 
+@@ -452,6 +455,28 @@
+         """
+         return self._ec_quorum_size
+ 
++@BaseStoragePolicy.register(PACK_POLICY)
++class PackStoragePolicy(BaseStoragePolicy):
++    """
++    Represents a storage policy of type 'pack'.
++
++    Pack Engine is another implementation of 'replication' engine,
++    so we can just copy the code from replication engine's policy.
++
++    Not meant to be instantiated directly; use
++    :func:`~swift.common.storage_policy.reload_storage_policies` to load
++    POLICIES from ``swift.conf``.
++    """
++
++    @property
++    def quorum(self):
++        """
++        Quorum concept in the replication case:
++            floor(number of replica / 2) + 1
++        """
++        if not self.object_ring:
++            raise PolicyError('Ring is not loaded')
++        return quorum_size(self.object_ring.replica_count)
+ 
+ class StoragePolicyCollection(object):
+     """
+diff -Naur /usr/src/swift-2.3.1.dev12/swift/obj/diskfile.py /usr/src/swift-2.3.1.dev13/swift/obj/diskfile.py
+--- /usr/src/swift-2.3.1.dev12/swift/obj/diskfile.py	2018-05-26 11:35:30.000000000 +0000
++++ /usr/src/swift-2.3.1.dev13/swift/obj/diskfile.py	2018-05-26 11:22:41.000000000 +0000
+@@ -65,7 +65,7 @@
+ from swift.common.swob import multi_range_iterator
+ from swift.common.storage_policy import (
+     get_policy_string, split_policy_string, PolicyError, POLICIES,
+-    REPL_POLICY, EC_POLICY)
++    REPL_POLICY, EC_POLICY, PACK_POLICY)
+ from functools import partial
+ 
+ 
+@@ -2383,3 +2383,8 @@
+                                     reclaim_age)
+         else:
+             return hashed, hashes
++
++@DiskFileRouter.register(PACK_POLICY)
++class PackDiskFileManager(object):
++    def __init__(self, conf, logger):
++        pass
+diff -Naur /usr/src/swift-2.3.1.dev12/swift/proxy/controllers/obj.py /usr/src/swift-2.3.1.dev13/swift/proxy/controllers/obj.py
+--- /usr/src/swift-2.3.1.dev12/swift/proxy/controllers/obj.py	2018-05-26 11:35:30.000000000 +0000
++++ /usr/src/swift-2.3.1.dev13/swift/proxy/controllers/obj.py	2018-05-26 11:22:41.000000000 +0000
+@@ -60,7 +60,7 @@
+     HTTP_SERVICE_UNAVAILABLE, HTTP_INSUFFICIENT_STORAGE,
+     HTTP_PRECONDITION_FAILED, HTTP_CONFLICT, is_informational)
+ from swift.common.storage_policy import (POLICIES, REPL_POLICY, EC_POLICY,
+-                                         ECDriverError, PolicyError)
++                                         PACK_POLICY, ECDriverError, PolicyError)
+ from swift.proxy.controllers.base import Controller, delay_denial, \
+     cors_validation
+ from swift.common.swob import HTTPAccepted, HTTPBadRequest, HTTPNotFound, \
+@@ -1132,6 +1132,14 @@
+         return resp
+ 
+ 
++@ObjectControllerRouter.register(PACK_POLICY)
++class PackObjectController(BaseObjectController):
++    def _get_or_head_response(self, req, node_iter, partition, policy):
++        resp = self.GETorHEAD_base(
++            req, _('Object'), node_iter, partition,
++            req.swift_entity_path)
++        return resp
++
+ class ECAppIter(object):
+     """
+     WSGI iterable that decodes EC fragment archives (or portions thereof)

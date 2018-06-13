@@ -1,0 +1,85 @@
+---
+pack:
+  level: info
+  encoding: json
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: ts
+    timeEncoder: ISO8601
+    callerKey: caller
+    callerEncoder: short
+
+  outputPaths:
+    - /var/log/auklet/pack-engine.log
+  initialFields:
+    name: pack
+
+swift:
+  level: info
+  encoding: json
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: ts
+    timeEncoder: ISO8601
+    callerKey: caller
+    callerEncoder: short
+
+  outputPaths:
+    - /var/log/auklet/swift-engine.log
+  initialFields:
+    name: swift
+
+object-server:
+  level: info
+  encoding: json
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: ts
+    timeEncoder: ISO8601
+    callerKey: caller
+    callerEncoder: short
+
+  outputPaths:
+    - /var/log/auklet/object-server.log
+  initialFields:
+    name: object-server
+
+pack-auditor:
+  level: info
+  encoding: json
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: ts
+    timeEncoder: ISO8601
+    callerKey: caller
+    callerEncoder: short
+
+  outputPaths:
+    - /var/log/auklet/pack-auditor.log
+  initialFields:
+    name: pack-auditor
+
+pack-replicator:
+  level: info
+  encoding: json
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: ts
+    timeEncoder: ISO8601
+    callerKey: caller
+    callerEncoder: short
+
+  outputPaths:
+    - /var/log/auklet/pack-replicator.log
+  initialFields:
+    name: pack-replicator

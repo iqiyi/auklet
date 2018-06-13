@@ -1,0 +1,16 @@
+[Unit]
+Description=Auklet - Object Server
+Wants=network-online.target
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+LimitNOFILE=102400
+User=swift
+Restart=always
+ExecStart=/usr/local/bin/auklet object -l /etc/hummingbird/zap.yml
+TimeoutStopSec=60
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
