@@ -5,15 +5,15 @@ import (
 	context "golang.org/x/net/context"
 )
 
-type KVStoreService struct {
+type KVService struct {
 	store *KVStore
 }
 
-func NewKVStoreService(store *KVStore) *KVStoreService {
-	return &KVStoreService{store}
+func NewKVService(store *KVStore) *KVService {
+	return &KVService{store}
 }
 
-func (k *KVStoreService) SaveAsyncJob(
+func (k *KVService) SaveAsyncJob(
 	ctx context.Context, msg *SaveAsyncJobMsg) (*SaveAsyncJobReply, error) {
 	err := k.store.SaveAsyncJob(msg.Job)
 	if err != nil {
@@ -23,7 +23,7 @@ func (k *KVStoreService) SaveAsyncJob(
 	return &SaveAsyncJobReply{Success: err == nil}, nil
 }
 
-func (k *KVStoreService) ListAsyncJobs(
+func (k *KVService) ListAsyncJobs(
 	ctx context.Context, msg *ListAsyncJobsMsg) (*ListAsyncJobsReply, error) {
 	reply := &ListAsyncJobsReply{}
 	var err error
@@ -36,7 +36,7 @@ func (k *KVStoreService) ListAsyncJobs(
 	return reply, nil
 }
 
-func (k *KVStoreService) CleanAsyncJob(
+func (k *KVService) CleanAsyncJob(
 	ctx context.Context, msg *CleanAsyncJobMsg) (*CleanAsyncJobReply, error) {
 	err := k.store.CleanAsyncJob(msg.Job)
 	if err != nil {

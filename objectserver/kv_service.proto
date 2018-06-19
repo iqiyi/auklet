@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package objectserver;
 
-service KVStore {   
+service KVService {   
     rpc SaveAsyncJob(SaveAsyncJobMsg) returns (SaveAsyncJobReply) {}
     rpc ListAsyncJobs(ListAsyncJobsMsg) returns (ListAsyncJobsReply) {}
     rpc CleanAsyncJob(CleanAsyncJobMsg) returns (CleanAsyncJobReply) {}
