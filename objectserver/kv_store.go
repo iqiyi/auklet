@@ -11,6 +11,7 @@ import (
 	context "golang.org/x/net/context"
 
 	"github.com/iqiyi/auklet/common"
+	"github.com/iqiyi/auklet/common/conf"
 )
 
 type KVStore struct {
@@ -70,7 +71,7 @@ func (s *KVStore) getDB(device string) (*rocksdb.DB, error) {
 	s.Lock()
 	defer s.Unlock()
 
-	db, err := s.openAsyncJobDB(s.driveRoot, device)
+	db, err := s.openAsyncJobDB(device)
 	if err != nil {
 		return nil, err
 	}
@@ -79,11 +80,11 @@ func (s *KVStore) getDB(device string) (*rocksdb.DB, error) {
 	return db, nil
 }
 
-func (s *KVStore) SaveAsyncJob(device string, job *KVAsyncJob) error {
-	db, err := s.getDB(device)
+func (s *KVStore) SaveAsyncJob(job *KVAsyncJob) error {
+	db, err := s.getDB(job.Device)
 	if err != nil {
 		glogger.Error("unable to find RocksDB",
-			zap.String("device", device), zap.Error(err))
+			zap.String("device", job.Device), zap.Error(err))
 		return err
 	}
 
@@ -132,8 +133,8 @@ func (s *KVStore) ListAsyncJobs(device string, policy int,
 	return jobs, nil
 }
 
-func (s *KVStore) CleanAsyncJob(device string, job *KVAsyncJob) error {
-	db, err := s.getDB(device)
+func (s *KVStore) CleanAsyncJob(job *KVAsyncJob) error {
+	db, err := s.getDB(job.Device)
 	if err != nil {
 		return err
 	}
@@ -142,20 +143,60 @@ func (s *KVStore) CleanAsyncJob(device string, job *KVAsyncJob) error {
 	return db.Delete(s.wopt, key)
 }
 
+func NewKVStore(driveRoot string) *KVStore {
+	s := &KVStore{
+		driveRoot: driveRoot,
+		dbs:       make(map[string]*rocksdb.DB),
+		wopt:      rocksdb.NewDefaultWriteOptions(),
+		ropt:      rocksdb.NewDefaultReadOptions(),
+	}
+	var err error
+	s.hashPrefix, s.hashSuffix, err = conf.GetHashPrefixAndSuffix()
+	if err != nil {
+		glogger.Error("unable to find hash prefix/suffix", zap.Error(err))
+		return nil
+	}
+
+	return s
+}
+
 type KVStoreService struct {
+	store *KVStore
+}
+
+func NewKVStoreService(store *KVStore) *KVStoreService {
+	return &KVStoreService{store}
 }
 
 func (k *KVStoreService) SaveAsyncJob(
 	ctx context.Context, msg *SaveAsyncJobMsg) (*SaveAsyncJobReply, error) {
+	err := k.store.SaveAsyncJob(msg.Job)
+	if err != nil {
+		glogger.Error("unable to save async job", zap.Error(err))
+	}
+
+	return &SaveAsyncJobReply{Success: err == nil}, nil
 }
 
 func (k *KVStoreService) ListAsyncJobs(
 	ctx context.Context, msg *ListAsyncJobsMsg) (*ListAsyncJobsReply, error) {
+	reply := &ListAsyncJobsReply{}
+	var err error
+	reply.Jobs, err = k.store.ListAsyncJobs(
+		msg.Device, int(msg.Policy), msg.Position, int(msg.Pagination))
+	if err != nil {
+		glogger.Error("unable to list async jobs", zap.Error(err))
+	}
+
+	return reply, nil
 }
 
 func (k *KVStoreService) CleanAsyncJob(
 	ctx context.Context, msg *CleanAsyncJobMsg) (*CleanAsyncJobReply, error) {
-}
+	err := k.store.CleanAsyncJob(msg.Job)
+	if err != nil {
+		glogger.Error("unable to clean async job", zap.Error(err))
+	}
 
-func NewKVStoreService(db *rocksdb.DB) *KVStoreService {
+	return &CleanAsyncJobReply{Success: err == nil}, nil
 }
