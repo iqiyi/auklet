@@ -68,6 +68,8 @@ type ObjectServer struct {
 	// header filters
 	blacklist map[string]bool
 	whitelist map[string]bool
+
+	asyncJobMgr AsyncJobMgr
 }
 
 func (s *ObjectServer) Finalize() {
@@ -166,6 +168,24 @@ func (s *ObjectServer) Start() error {
 	return s.Serve(sock)
 }
 
+func (s *ObjectServer) initAsyncJobMgr(
+	cnf conf.Config, flags *flag.FlagSet) error {
+	kv := NewKVStore(s.driveRoot)
+	port := int(
+		cnf.GetInt("app:object-server", "async_kv_service_port", 60001))
+
+	rpcSvc := NewKVService(kv, port)
+	go rpcSvc.start()
+
+	var err error
+	s.asyncJobMgr, err = NewKVAsyncJobMgr(port)
+	if err != nil {
+		common.BootstrapLogger.Printf("unable to initialize kv async job mgr: %v", err)
+	}
+
+	return err
+}
+
 func InitServer(config conf.Config, flags *flag.FlagSet) (
 	srv.Server, error) {
 	prefix, suffix, err := conf.GetHashPrefixAndSuffix()
@@ -192,6 +212,7 @@ func InitServer(config conf.Config, flags *flag.FlagSet) (
 		newEngine, err := engine.FindEngine(p.Type)
 		if err != nil {
 			server.logger.Error("object engine not found",
+
 				zap.String("engine", p.Type), zap.Error(err))
 			return nil, err
 		}
@@ -264,6 +285,10 @@ func InitServer(config conf.Config, flags *flag.FlagSet) (
 		Handler:      server.buildHandler(config),
 		ReadTimeout:  24 * time.Hour,
 		WriteTimeout: 24 * time.Hour,
+	}
+
+	if err := server.initAsyncJobMgr(config, flags); err != nil {
+		return nil, err
 	}
 
 	return server, nil

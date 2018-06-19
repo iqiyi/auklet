@@ -7,8 +7,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-
-	"github.com/iqiyi/auklet/common/conf"
 )
 
 const (
@@ -100,10 +98,8 @@ func (m *KVAsyncJobMgr) Finish(job AsyncJob) error {
 	return err
 }
 
-func NewAsyncJobMgr(config conf.Config) (AsyncJobMgr, error) {
+func NewKVAsyncJobMgr(port int) (AsyncJobMgr, error) {
 	// TODO: initialze mgr based on config
-	port := int(
-		config.GetInt("app:object-server", "async_job_mgr_rpc_port", 60001))
 	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithInsecure())
 	if err != nil {
 		glogger.Error("unable to dial to rpc server",

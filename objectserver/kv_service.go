@@ -1,16 +1,37 @@
 package objectserver
 
 import (
+	"fmt"
+	"net"
+
 	"go.uber.org/zap"
 	context "golang.org/x/net/context"
+	"google.golang.org/grpc"
+
+	"github.com/iqiyi/auklet/common"
 )
 
 type KVService struct {
 	store *KVStore
+	port  int
 }
 
-func NewKVService(store *KVStore) *KVService {
-	return &KVService{store}
+func NewKVService(store *KVStore, port int) *KVService {
+	return &KVService{
+		store: store,
+		port:  port,
+	}
+}
+
+func (k *KVService) start() {
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", k.port))
+	if err != nil {
+		common.BootstrapLogger.Fatal("kv rpc server listen fail")
+	}
+
+	srv := grpc.NewServer()
+	RegisterKVServiceServer(srv, k)
+	srv.Serve(l)
 }
 
 func (k *KVService) SaveAsyncJob(
