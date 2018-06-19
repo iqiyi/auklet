@@ -27,6 +27,8 @@ var (
 	DriveFull             = errors.New("drive is full")
 	ErrHashConfNotFound   = errors.New("unable to read hash prefix and suffxi")
 	ErrAsyncJobDBNotFound = errors.New("unable to find db for async jobs")
+	ErrKVAsyncJobNotSaved = errors.New("unable to save async job")
+	ErrKVAsyncJobNotClean = errors.New("unable to clean async job")
 )
 
 // Client bad request error text
