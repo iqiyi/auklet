@@ -17,6 +17,8 @@
 package common
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -462,6 +464,13 @@ func ParseIfMatch(s string) map[string]bool {
 
 func ObjectName(account, container, obj string) string {
 	return fmt.Sprintf("/%s/%s/%s", account, container, obj)
+}
+
+func HashObjectName(prefix, account, container, obj, suffix string) string {
+	h := md5.New()
+	text := fmt.Sprintf("%s/%s/%s/%s%s", prefix, account, container, obj, suffix)
+	io.WriteString(h, text)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func RandIntInRange(min, max int) int {
