@@ -11,10 +11,13 @@ import (
 
 	"github.com/iqiyi/auklet/common"
 	"github.com/iqiyi/auklet/common/conf"
+	"github.com/iqiyi/auklet/common/fs"
+	"github.com/iqiyi/auklet/common/ring"
 )
 
 type KVStore struct {
 	driveRoot  string
+	ringPort   int
 	hashPrefix string
 	hashSuffix string
 	wopt       *rocksdb.WriteOptions
@@ -59,32 +62,93 @@ func (s *KVStore) openAsyncJobDB(device string) (*rocksdb.DB, error) {
 	return db, nil
 }
 
-func (s *KVStore) getDB(device string) (*rocksdb.DB, error) {
+func (s *KVStore) getDB(device string) *rocksdb.DB {
 	s.RLock()
-	db := s.dbs[device]
-	s.RUnlock()
-	if db != nil {
-		return db, nil
+	defer s.RUnlock()
+	return s.dbs[device]
+}
+
+func (s *KVStore) listDevices() map[int][]string {
+	var devices map[int][]string
+	for _, p := range conf.LoadPolicies() {
+		devs, err := ring.ListLocalDevices(
+			"object", s.hashPrefix, s.hashSuffix, p.Index, s.ringPort)
+		if err != nil {
+			glogger.Error("unable to get local device list",
+				zap.Int("port", s.ringPort), zap.Error(err))
+		}
+
+		for _, d := range devs {
+			devices[p.Index] = append(devices[p.Index], d.Device)
+		}
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	return devices
+}
 
-	db, err := s.openAsyncJobDB(device)
-	if err != nil {
-		return nil, err
+func (s *KVStore) initDBs() {
+	devices := s.listDevices()
+	for _, devs := range devices {
+		for _, d := range devs {
+			// During initialization, there is no need to acquire any lock.
+			if db := s.dbs[d]; db != nil {
+				continue
+			}
+
+			db, err := s.openAsyncJobDB(d)
+			if err != nil {
+				glogger.Error("unable to open RocksDB", zap.String("device", d), zap.Error(err))
+				continue
+			}
+
+			s.dbs[d] = db
+		}
 	}
+}
 
-	s.dbs[device] = db
-	return db, nil
+func (s *KVStore) mountListener() {
+	glogger.Debug("disk mount event detected")
+	devices := s.listDevices()
+	for _, devs := range devices {
+		for _, dev := range devs {
+			p := filepath.Join(s.driveRoot, dev)
+			mounted, err := fs.IsMount(p)
+			if err != nil {
+				glogger.Error("unable to check if disk is mounted",
+					zap.String("path", p), zap.Error(err))
+				continue
+			}
+
+			if !mounted && s.dbs[dev] != nil {
+				glogger.Info(
+					"disk umounted, remove db instance", zap.String("device", dev))
+				s.Lock()
+				delete(s.dbs, dev)
+				s.Unlock()
+			}
+
+			if mounted && s.dbs[dev] == nil {
+				glogger.Info(
+					"disk mounted, init db instance", zap.String("device", dev))
+				db, err := s.openAsyncJobDB(dev)
+				if err != nil {
+					glogger.Error("unable to open RocksDB",
+						zap.String("device", dev), zap.Error(err))
+					continue
+				}
+
+				s.Lock()
+				s.dbs[dev] = db
+				s.Unlock()
+			}
+		}
+	}
 }
 
 func (s *KVStore) SaveAsyncJob(job *KVAsyncJob) error {
-	db, err := s.getDB(job.Device)
-	if err != nil {
-		glogger.Error("unable to find RocksDB",
-			zap.String("device", job.Device), zap.Error(err))
-		return err
+	db := s.getDB(job.Device)
+	if db == nil {
+		return ErrAsyncJobDBNotFound
 	}
 
 	key := []byte(s.asyncJobKey(job))
@@ -99,9 +163,9 @@ func (s *KVStore) SaveAsyncJob(job *KVAsyncJob) error {
 
 func (s *KVStore) ListAsyncJobs(device string, policy int,
 	position *KVAsyncJob, num int) ([]*KVAsyncJob, error) {
-	db, err := s.getDB(device)
-	if err != nil {
-		return nil, err
+	db := s.getDB(device)
+	if db == nil {
+		return nil, ErrAsyncJobDBNotFound
 	}
 
 	var jobs []*KVAsyncJob
@@ -133,9 +197,9 @@ func (s *KVStore) ListAsyncJobs(device string, policy int,
 }
 
 func (s *KVStore) CleanAsyncJob(job *KVAsyncJob) error {
-	db, err := s.getDB(job.Device)
-	if err != nil {
-		return err
+	db := s.getDB(job.Device)
+	if db == nil {
+		return ErrAsyncJobDBNotFound
 	}
 	key := []byte(s.asyncJobKey(job))
 
@@ -149,6 +213,7 @@ func NewKVStore(driveRoot string) *KVStore {
 		wopt:      rocksdb.NewDefaultWriteOptions(),
 		ropt:      rocksdb.NewDefaultReadOptions(),
 	}
+
 	var err error
 	s.hashPrefix, s.hashSuffix, err = conf.GetHashPrefixAndSuffix()
 	if err != nil {
@@ -156,5 +221,6 @@ func NewKVStore(driveRoot string) *KVStore {
 		return nil
 	}
 
+	s.initDBs()
 	return s
 }
