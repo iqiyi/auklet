@@ -102,7 +102,7 @@ func (m *FSAsyncJobMgr) Save(job AsyncJob) error {
 			zap.String("path", dir), zap.Error(err))
 		return err
 	}
-	t := fs.TempDir(m.driveRoot, j.Device)
+	t := fs.TempDir(m.driveRoot, j.Device, j.Policy)
 	w, err := fs.NewAtomicFileWriter(t, dir)
 	if err != nil {
 		glogger.Error("unable to create afw for async job", zap.Error(err))

@@ -19,14 +19,10 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/iqiyi/auklet/common"
-	"github.com/iqiyi/auklet/common/fs"
 	"github.com/iqiyi/auklet/common/middleware"
-	"github.com/iqiyi/auklet/common/pickle"
 	"go.uber.org/zap"
 )
 
@@ -94,29 +90,6 @@ func (s *ObjectServer) sendContainerUpdate(
 	}
 	resp.Body.Close()
 	return resp.StatusCode/100 == 2
-}
-
-func (s *ObjectServer) saveAsync(
-	method, account, container, obj, localDevice string, headers http.Header) {
-	hash := s.hashObjectName(account, container, obj)
-	asyncFile := filepath.Join(s.driveRoot, localDevice, "async_pending",
-		hash[29:32], hash+"-"+headers.Get(common.XTimestamp))
-	tempDir := fs.TempDir(s.driveRoot, localDevice)
-	data := map[string]interface{}{
-		"op":        method,
-		"account":   account,
-		"container": container,
-		"obj":       obj,
-		"headers":   common.Headers2Map(headers),
-	}
-	if os.MkdirAll(filepath.Dir(asyncFile), 0755) == nil {
-		writer, err := fs.NewAtomicFileWriter(tempDir, filepath.Dir(asyncFile))
-		if err == nil {
-			defer writer.Abandon()
-			writer.Write(pickle.PickleDumps(data))
-			writer.Save(asyncFile)
-		}
-	}
 }
 
 func (s *ObjectServer) updateContainer(
