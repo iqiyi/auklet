@@ -34,6 +34,7 @@ import (
 
 	"github.com/iqiyi/auklet/common"
 	"github.com/iqiyi/auklet/common/conf"
+	"github.com/iqiyi/auklet/common/fs"
 	"github.com/iqiyi/auklet/common/middleware"
 	"github.com/iqiyi/auklet/common/srv"
 	"github.com/iqiyi/auklet/objectserver/engine"
@@ -173,6 +174,15 @@ func (s *ObjectServer) initAsyncJobMgr(
 	kv := NewKVStore(s.driveRoot, s.port)
 	port := int(
 		cnf.GetInt("app:object-server", "async_kv_service_port", 60001))
+
+	test := cnf.GetBool("app:object-server", "test_mode", false)
+	if !test {
+		m := fs.NewMountMonitor()
+		m.RegisterCallback("async-job-mgr", kv.mountListener)
+		go m.Start()
+	} else {
+		kv.setTestMode(true)
+	}
 
 	rpcSvc := NewKVService(kv, port)
 	go rpcSvc.start()

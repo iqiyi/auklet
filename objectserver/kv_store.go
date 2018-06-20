@@ -23,8 +23,13 @@ type KVStore struct {
 	wopt       *rocksdb.WriteOptions
 	ropt       *rocksdb.ReadOptions
 	dbs        map[string]*rocksdb.DB
+	testMode   bool
 
 	sync.RWMutex
+}
+
+func (s *KVStore) setTestMode(mode bool) {
+	s.testMode = mode
 }
 
 func (s *KVStore) asyncJobPrefix(policy int) string {
@@ -63,6 +68,25 @@ func (s *KVStore) openAsyncJobDB(device string) (*rocksdb.DB, error) {
 }
 
 func (s *KVStore) getDB(device string) *rocksdb.DB {
+	if s.testMode {
+		glogger.Info("get db instance in test mode")
+		s.Lock()
+		defer s.Unlock()
+		db := s.dbs[device]
+		if db == nil {
+			var err error
+			db, err = s.openAsyncJobDB(filepath.Join(s.driveRoot, device))
+			if err != nil {
+				glogger.Error("unable to open RocksDB",
+					zap.String("device", device), zap.Error(err))
+				return nil
+			}
+			s.dbs[device] = db
+		}
+
+		return db
+	}
+
 	s.RLock()
 	defer s.RUnlock()
 	return s.dbs[device]
