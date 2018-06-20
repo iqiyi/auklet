@@ -170,7 +170,7 @@ func (s *ObjectServer) Start() error {
 
 func (s *ObjectServer) initAsyncJobMgr(
 	cnf conf.Config, flags *flag.FlagSet) error {
-	kv := NewKVStore(s.driveRoot)
+	kv := NewKVStore(s.driveRoot, s.port)
 	port := int(
 		cnf.GetInt("app:object-server", "async_kv_service_port", 60001))
 

@@ -69,7 +69,7 @@ func (s *KVStore) getDB(device string) *rocksdb.DB {
 }
 
 func (s *KVStore) listDevices() map[int][]string {
-	var devices map[int][]string
+	devices := map[int][]string{}
 	for _, p := range conf.LoadPolicies() {
 		devs, err := ring.ListLocalDevices(
 			"object", s.hashPrefix, s.hashSuffix, p.Index, s.ringPort)
@@ -206,12 +206,13 @@ func (s *KVStore) CleanAsyncJob(job *KVAsyncJob) error {
 	return db.Delete(s.wopt, key)
 }
 
-func NewKVStore(driveRoot string) *KVStore {
+func NewKVStore(driveRoot string, ringPort int) *KVStore {
 	s := &KVStore{
 		driveRoot: driveRoot,
 		dbs:       make(map[string]*rocksdb.DB),
 		wopt:      rocksdb.NewDefaultWriteOptions(),
 		ropt:      rocksdb.NewDefaultReadOptions(),
+		ringPort:  ringPort,
 	}
 
 	var err error
