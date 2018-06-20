@@ -197,6 +197,8 @@ func InitUpdater(cnf conf.Config, flags *flag.FlagSet) (srv.Daemon, error) {
 		return nil, err
 	}
 
+	glogger = logger
+
 	u := &Updater{
 		logger: logger,
 		client: &http.Client{Timeout: 5 * time.Minute},
