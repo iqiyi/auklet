@@ -1,17 +1,17 @@
 // Copyright (c) 2016-2018 iQIYI.com.  All rights reserved.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// 
+//
 
 package command
 
@@ -25,6 +25,7 @@ import (
 	"github.com/mitchellh/cli"
 	rocksdb "github.com/tecbot/gorocksdb"
 
+	"github.com/iqiyi/auklet/objectserver"
 	"github.com/iqiyi/auklet/objectserver/engine/pack"
 )
 
@@ -40,10 +41,11 @@ Usage: auklet dump-db -d db -p prefix
 }
 
 func (c *DumpDBCommand) Run(args []string) int {
-	var dbPath, prefix string
+	var dbPath, prefix, keyType string
 	flags := flag.NewFlagSet("dump-db", flag.ExitOnError)
 	flags.StringVar(&dbPath, "d", "", "path of RocksDB")
 	flags.StringVar(&prefix, "p", "", "prefix of db keys")
+	flags.StringVar(&keyType, "t", "index", "type of key")
 	if err := flags.Parse(args); err != nil {
 		return EXIT_USAGE
 	}
@@ -54,9 +56,10 @@ func (c *DumpDBCommand) Run(args []string) int {
 	}
 
 	opts := rocksdb.NewDefaultOptions()
-	db, err := rocksdb.OpenDbForReadOnly(opts, dbPath, true)
+
+	db, err := rocksdb.OpenDbForReadOnly(opts, dbPath, false)
 	if err != nil {
-		fmt.Printf("unable to open RocksDB, %v\n", err)
+		c.Ui.Error(fmt.Sprintf("unable to open RocksDB, %v\n", err))
 		return EXIT_ERROR
 	}
 
@@ -66,12 +69,17 @@ func (c *DumpDBCommand) Run(args []string) int {
 	pre := []byte(prefix)
 	for iter.Seek(pre); iter.ValidForPrefix(pre); iter.Next() {
 		b := iter.Value().Data()
-		index := new(pack.DBIndex)
-		if err := proto.Unmarshal(b, index); err != nil {
+		var obj proto.Message
+		if keyType == "index" {
+			obj = new(pack.DBIndex)
+		} else {
+			obj = new(objectserver.KVAsyncJob)
+		}
+		if err := proto.Unmarshal(b, obj); err != nil {
 			panic(err)
 		}
 
-		if b, err = json.Marshal(index); err != nil {
+		if b, err = json.Marshal(obj); err != nil {
 			panic(err)
 		}
 
@@ -82,5 +90,5 @@ func (c *DumpDBCommand) Run(args []string) int {
 }
 
 func (c *DumpDBCommand) Synopsis() string {
-	return "dump the index from RocksDB"
+	return "dump the index/pending jobs from RocksDB"
 }
