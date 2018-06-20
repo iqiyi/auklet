@@ -202,9 +202,7 @@ func InitUpdater(cnf conf.Config, flags *flag.FlagSet) (srv.Daemon, error) {
 		client: &http.Client{Timeout: 5 * time.Minute},
 	}
 
-	port := int(
-		cnf.GetInt("app:object-server", "async_kv_service_port", 60001))
-	u.asyncJobMgr, err = NewKVAsyncJobMgr(port)
+	u.asyncJobMgr, err = NewAsyncJobMgr(cnf, flags)
 	if err != nil {
 		return nil, err
 	}

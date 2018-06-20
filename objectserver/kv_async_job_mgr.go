@@ -98,7 +98,7 @@ func (m *KVAsyncJobMgr) Finish(job AsyncJob) error {
 	return err
 }
 
-func NewKVAsyncJobMgr(port int) (AsyncJobMgr, error) {
+func NewKVAsyncJobMgr(port int) (*KVAsyncJobMgr, error) {
 	// TODO: initialze mgr based on config
 	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithInsecure())
 	if err != nil {

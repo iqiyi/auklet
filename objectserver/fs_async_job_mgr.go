@@ -23,14 +23,16 @@ const (
 
 // I'm afraid we can't reuse here KVAsyncJob since FSAsyncJobMgr
 // uses another serialization framework, pickle.
+// Cannot figure out how to ignore field in Pickle. Both Device
+// and Policy could be ignored.
 type FSAsyncJob struct {
 	Method    string            `pickle:"op"`
 	Headers   map[string]string `pickle:"headers"`
 	Account   string            `pickle:"account"`
 	Container string            `pickle:"container"`
 	Object    string            `pickle:"obj"`
-	Device    string            `pickle:"-"`
-	Policy    int               `pickle:"-"`
+	Device    string            `pickle:"device"`
+	Policy    int               `pickle:"policy"`
 }
 
 func (j *FSAsyncJob) GetMethod() string {
@@ -201,7 +203,7 @@ func (m *FSAsyncJobMgr) Finish(job AsyncJob) error {
 	return nil
 }
 
-func NewFSAsyncJobMgr(driveRoot string) (AsyncJobMgr, error) {
+func NewFSAsyncJobMgr(driveRoot string) (*FSAsyncJobMgr, error) {
 	mgr := &FSAsyncJobMgr{
 		driveRoot: driveRoot,
 		jobs:      make(map[string][]*FSAsyncJob),

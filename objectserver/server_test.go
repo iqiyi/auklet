@@ -84,6 +84,7 @@ devices=%s
 mount_check=false
 bind_port=%d
 rpc_port=%d
+async_job_manager=fs
 	`
 	configString := fmt.Sprintf(confTemplate, driveRoot,
 		common.RandIntInRange(40000, 50000), common.RandIntInRange(50001, 60000))
@@ -119,6 +120,10 @@ rpc_port=%d
 
 	server.hashPrefix = ""
 	server.hashSuffix = "changeme"
+
+	mgr := server.asyncJobMgr.(*FSAsyncJobMgr)
+	mgr.hashPrefix = server.hashPrefix
+	mgr.hashSuffix = server.hashSuffix
 
 	return &TestServer{
 		Server:    ts,

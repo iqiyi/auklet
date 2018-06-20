@@ -29,6 +29,7 @@ var (
 	ErrAsyncJobDBNotFound = errors.New("unable to find db for async jobs")
 	ErrKVAsyncJobNotSaved = errors.New("unable to save async job")
 	ErrKVAsyncJobNotClean = errors.New("unable to clean async job")
+	ErrUnknownAsyncJobMgr = errors.New("unknown async job manager type")
 )
 
 // Client bad request error text
