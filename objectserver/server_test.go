@@ -76,15 +76,13 @@ func makeObjectServer(settings ...string) (*TestServer, error) {
 	// bind_port here is actually a pseudo config intended to distinguish
 	// the metrics collector
 	confTemplate := `
-[object-pack]
-test_mode = yes
-
 [app:object-server]
 devices=%s
 mount_check=false
 bind_port=%d
 rpc_port=%d
 async_job_manager=fs
+test_mode = yes
 	`
 	configString := fmt.Sprintf(confTemplate, driveRoot,
 		common.RandIntInRange(40000, 50000), common.RandIntInRange(50001, 60000))

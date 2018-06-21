@@ -99,7 +99,6 @@ func (m *KVAsyncJobMgr) Finish(job AsyncJob) error {
 }
 
 func NewKVAsyncJobMgr(port int) (*KVAsyncJobMgr, error) {
-	// TODO: initialze mgr based on config
 	conn, err := grpc.Dial(fmt.Sprintf("localhost:%d", port), grpc.WithInsecure())
 	if err != nil {
 		glogger.Error("unable to dial to rpc server",

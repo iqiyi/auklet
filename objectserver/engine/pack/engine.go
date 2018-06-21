@@ -177,7 +177,7 @@ func PackEngineConstructor(config conf.Config, policy *conf.Policy,
 	if dm == nil {
 		panic("failed to load pack device manager")
 	}
-	dm.testMode = config.GetBool("object-pack", "test_mode", false)
+	dm.testMode = config.GetBool("app:object-server", "test_mode", false)
 	if !dm.testMode {
 		go dm.monitorDisks()
 	}
