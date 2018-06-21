@@ -14,6 +14,7 @@ import (
 type KVService struct {
 	store *KVStore
 	port  int
+	srv   *grpc.Server
 }
 
 func NewKVService(store *KVStore, port int) *KVService {
@@ -29,9 +30,13 @@ func (k *KVService) start() {
 		common.BootstrapLogger.Fatal("kv rpc server listen fail")
 	}
 
-	srv := grpc.NewServer()
-	RegisterKVServiceServer(srv, k)
-	srv.Serve(l)
+	k.srv = grpc.NewServer()
+	RegisterKVServiceServer(k.srv, k)
+	k.srv.Serve(l)
+}
+
+func (k *KVService) stop() {
+	k.srv.GracefulStop()
 }
 
 func (k *KVService) SaveAsyncJob(

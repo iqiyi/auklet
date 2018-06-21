@@ -70,19 +70,8 @@ func TestSaveAsyncJob(t *testing.T) {
 	s := NewKVStore(root, 0)
 	s.setTestMode(true)
 
-	ts := "1529551760.123456"
-	job := &KVAsyncJob{
-		Method:    http.MethodPut,
-		Account:   "a",
-		Container: "c",
-		Object:    "o",
-		Headers:   map[string]string{common.XTimestamp: ts},
-		Device:    TEST_DEVICE,
-		Policy:    0,
-	}
-
+	job := newKVAsyncJob()
 	require.Nil(t, s.SaveAsyncJob(job))
-
 	jobs, _ := s.ListAsyncJobs(TEST_DEVICE, 0, nil, KV_JOBS_PAGINATION)
 	require.Equal(t, job, jobs[0])
 }
@@ -94,32 +83,17 @@ func TestListAsyncJobs(t *testing.T) {
 	s := NewKVStore(root, 0)
 	s.setTestMode(true)
 
-	job1 := &KVAsyncJob{
-		Method:    http.MethodPut,
-		Account:   "a",
-		Container: "c",
-		Object:    "o",
-		Headers:   map[string]string{common.XTimestamp: "1529551760.123456"},
-		Device:    TEST_DEVICE,
-		Policy:    0,
-	}
-
-	job2 := &KVAsyncJob{
-		Method:    http.MethodPut,
-		Account:   "a",
-		Container: "c",
-		Object:    "o2",
-		Headers:   map[string]string{common.XTimestamp: "1529551761.123456"},
-		Device:    TEST_DEVICE,
-		Policy:    0,
-	}
+	job1 := newKVAsyncJob()
+	job2 := newKVAsyncJob()
 
 	s.SaveAsyncJob(job1)
 	s.SaveAsyncJob(job2)
 
 	jobs, err := s.ListAsyncJobs(TEST_DEVICE, 0, nil, KV_JOBS_PAGINATION)
 	require.Nil(t, err)
-	require.Len(t, jobs, 2)
+
+	expected := []AsyncJob{job1, job2}
+	expctedEqual(t, expected, toGeneric(jobs))
 }
 
 func TestFinishAsyncJob(t *testing.T) {
@@ -129,16 +103,7 @@ func TestFinishAsyncJob(t *testing.T) {
 	s := NewKVStore(root, 0)
 	s.setTestMode(true)
 
-	job := &KVAsyncJob{
-		Method:    http.MethodPut,
-		Account:   "a",
-		Container: "c",
-		Object:    "o",
-		Headers:   map[string]string{common.XTimestamp: "1529551760.123456"},
-		Device:    TEST_DEVICE,
-		Policy:    0,
-	}
-
+	job := newKVAsyncJob()
 	s.SaveAsyncJob(job)
 	require.Nil(t, s.CleanAsyncJob(job))
 	jobs, _ := s.ListAsyncJobs(TEST_DEVICE, 0, nil, KV_JOBS_PAGINATION)
