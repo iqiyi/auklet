@@ -2,6 +2,7 @@ package objectserver
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -74,8 +75,14 @@ func (s *KVStore) getDB(device string) *rocksdb.DB {
 		defer s.Unlock()
 		db := s.dbs[device]
 		if db == nil {
-			var err error
-			db, err = s.openAsyncJobDB(filepath.Join(s.driveRoot, device))
+			err := os.MkdirAll(filepath.Join(s.driveRoot, device), 0755)
+			if err != nil {
+				glogger.Error("unable to create device directory",
+					zap.String("device", device), zap.Error(err))
+				return nil
+			}
+
+			db, err = s.openAsyncJobDB(device)
 			if err != nil {
 				glogger.Error("unable to open RocksDB",
 					zap.String("device", device), zap.Error(err))

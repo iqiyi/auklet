@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	RPC_JOBS_PAGINATION = 1024
+	KV_JOBS_PAGINATION = 1024
 )
 
 type KVAsyncJobMgr struct {
@@ -58,7 +58,7 @@ func (m *KVAsyncJobMgr) Next(device string, policy int) AsyncJob {
 		msg := &ListAsyncJobsMsg{
 			Device:     device,
 			Policy:     int32(policy),
-			Pagination: RPC_JOBS_PAGINATION,
+			Pagination: KV_JOBS_PAGINATION,
 			Position:   m.positions[idx],
 		}
 		reply, err := m.rpc.ListAsyncJobs(ctx, msg)
