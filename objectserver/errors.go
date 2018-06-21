@@ -20,16 +20,17 @@ import (
 )
 
 var (
-	EngineNotFound        = errors.New("object engine not found")
-	LockPathError         = errors.New("unable to lock path")
-	PathNotDirError       = errors.New("path is not a directory")
-	NotPackEngine         = errors.New("engine is not pack type")
-	DriveFull             = errors.New("drive is full")
-	ErrHashConfNotFound   = errors.New("unable to read hash prefix and suffxi")
-	ErrAsyncJobDBNotFound = errors.New("unable to find db for async jobs")
-	ErrKVAsyncJobNotSaved = errors.New("unable to save async job")
-	ErrKVAsyncJobNotClean = errors.New("unable to clean async job")
-	ErrUnknownAsyncJobMgr = errors.New("unknown async job manager type")
+	EngineNotFound          = errors.New("object engine not found")
+	LockPathError           = errors.New("unable to lock path")
+	PathNotDirError         = errors.New("path is not a directory")
+	NotPackEngine           = errors.New("engine is not pack type")
+	DriveFull               = errors.New("drive is full")
+	ErrHashConfNotFound     = errors.New("unable to read hash prefix and suffxi")
+	ErrAsyncJobDBNotFound   = errors.New("unable to find db for async jobs")
+	ErrKVAsyncJobNotSaved   = errors.New("unable to save async job")
+	ErrKVAsyncJobNotClean   = errors.New("unable to clean async job")
+	ErrUnknownAsyncJobMgr   = errors.New("unknown async job manager type")
+	ErrFSAsyncJobMgrNotInit = errors.New("unable to create fs job mgr")
 )
 
 // Client bad request error text

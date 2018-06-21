@@ -181,7 +181,7 @@ func (s *FSStore) CleanAsyncJob(job *FSAsyncJob) error {
 	return nil
 }
 
-func NewFSStore(driveRoot string) (*FSStore, error) {
+func NewFSStore(driveRoot string) *FSStore {
 	s := &FSStore{
 		driveRoot: driveRoot,
 		filter:    bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO),
@@ -191,10 +191,10 @@ func NewFSStore(driveRoot string) (*FSStore, error) {
 	s.hashPrefix, s.hashSuffix, err = conf.GetHashPrefixAndSuffix()
 	if err != nil {
 		glogger.Error("unable to find hash prefix/suffix", zap.Error(err))
-		return nil, err
+		return nil
 	}
 
-	return s, nil
+	return s
 }
 
 type FSAsyncJobMgr struct {
@@ -248,9 +248,9 @@ func (m *FSAsyncJobMgr) Finish(job AsyncJob) error {
 }
 
 func NewFSAsyncJobMgr(driveRoot string) (*FSAsyncJobMgr, error) {
-	s, err := NewFSStore(driveRoot)
-	if err != nil {
-		return nil, err
+	s := NewFSStore(driveRoot)
+	if s == nil {
+		return nil, ErrFSAsyncJobMgrNotInit
 	}
 	mgr := &FSAsyncJobMgr{
 		store: s,

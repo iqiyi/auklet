@@ -25,12 +25,11 @@ type AsyncJobMgr interface {
 	Finish(job AsyncJob) error
 }
 
-func initKVAsyncJobMgr(
-	cnf conf.Config, flags *flag.FlagSet) (*KVAsyncJobMgr, error) {
+func startKVRpcService(cnf conf.Config, flags *flag.FlagSet) {
 	driveRoot := cnf.GetDefault("app:object-server", "devices", "/srv/node")
+
 	ringPort := int(cnf.GetInt("DEFAULT", "bind_port", 6000))
 	kv := NewKVStore(driveRoot, ringPort)
-
 	test := cnf.GetBool("app:object-server", "test_mode", false)
 	if !test {
 		m := fs.NewMountMonitor()
@@ -40,11 +39,23 @@ func initKVAsyncJobMgr(
 		kv.setTestMode(true)
 	}
 
+	var rpcSvc *KVService
 	rpcPort := int(cnf.GetInt("app:object-server", "async_kv_service_port", 60001))
-	rpcSvc := NewKVService(kv, rpcPort)
-	go rpcSvc.start()
+	if cnf.GetBool("app:object-server", "async_kv_fs_compatible", false) {
+		fs := NewFSStore(driveRoot)
+		rpcSvc = NewKVFSService(fs, kv, rpcPort)
+	} else {
+		rpcSvc = NewKVService(kv, rpcPort)
+	}
 
-	return NewKVAsyncJobMgr(rpcPort)
+	go rpcSvc.start()
+}
+
+func initKVAsyncJobMgr(
+	cnf conf.Config, flags *flag.FlagSet) (*KVAsyncJobMgr, error) {
+	startKVRpcService(cnf, flags)
+	port := int(cnf.GetInt("app:object-server", "async_kv_service_port", 60001))
+	return NewKVAsyncJobMgr(port)
 }
 
 func initFSAsyncJobMgr(

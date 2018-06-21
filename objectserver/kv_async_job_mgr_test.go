@@ -116,3 +116,36 @@ func TestKVMgrFinishJobs(t *testing.T) {
 	expected := []AsyncJob{job1}
 	expctedEqual(t, expected, jobs)
 }
+
+func TestKVMgrCompatibleMode(t *testing.T) {
+	root, err := ioutil.TempDir("", "")
+	require.Nil(t, err)
+	defer os.RemoveAll(root)
+	kv := NewKVStore(root, 0)
+	kv.setTestMode(true)
+	fs := NewFSStore(root)
+
+	port := common.RandIntInRange(50001, 60000)
+	svc := NewKVFSService(fs, kv, port)
+	go svc.start()
+	time.Sleep(time.Millisecond * 10)
+	defer svc.stop()
+
+	mgr, err := NewKVAsyncJobMgr(port)
+	require.Nil(t, err)
+
+	job1 := newKVAsyncJob()
+	mgr.Save(job1)
+
+	job2 := newFSAsyncJob()
+	require.Nil(t, fs.SaveAsyncJob(job2))
+
+	var jobs []AsyncJob
+	j := mgr.Next(job1.Device, int(job1.Policy))
+	for ; j != nil; j = mgr.Next(job1.Device, int(job1.Policy)) {
+		jobs = append(jobs, j)
+	}
+
+	expected := []AsyncJob{job1, svc.convertFSJob(job2)}
+	expctedEqual(t, expected, jobs)
+}

@@ -12,16 +12,10 @@ import (
 )
 
 type KVService struct {
-	store *KVStore
-	port  int
-	srv   *grpc.Server
-}
-
-func NewKVService(store *KVStore, port int) *KVService {
-	return &KVService{
-		store: store,
-		port:  port,
-	}
+	kv   *KVStore
+	port int
+	srv  *grpc.Server
+	fs   *FSStore
 }
 
 func (k *KVService) start() {
@@ -41,7 +35,7 @@ func (k *KVService) stop() {
 
 func (k *KVService) SaveAsyncJob(
 	ctx context.Context, msg *SaveAsyncJobMsg) (*SaveAsyncJobReply, error) {
-	err := k.store.SaveAsyncJob(msg.Job)
+	err := k.kv.SaveAsyncJob(msg.Job)
 	if err != nil {
 		glogger.Error("unable to save async job", zap.Error(err))
 	}
@@ -49,14 +43,47 @@ func (k *KVService) SaveAsyncJob(
 	return &SaveAsyncJobReply{Success: err == nil}, nil
 }
 
+func (k *KVService) convertFSJob(job *FSAsyncJob) *KVAsyncJob {
+	return &KVAsyncJob{
+		Method:    job.Method,
+		Headers:   job.Headers,
+		Account:   job.Account,
+		Container: job.Container,
+		Object:    job.Object,
+		Device:    job.Device,
+		Policy:    int32(job.Policy),
+	}
+}
+
+func (k *KVService) listFSAsyncJobs(
+	device string, policy int, num int) (*ListAsyncJobsReply, error) {
+	jobs, err := k.fs.ListAsyncJobs(device, policy, num)
+	reply := &ListAsyncJobsReply{}
+	if err != nil {
+		glogger.Error("unable to list fs async jobs", zap.Error(err))
+		return reply, nil
+	}
+
+	reply.Jobs = make([]*KVAsyncJob, len(jobs))
+	for i := range jobs {
+		reply.Jobs[i] = k.convertFSJob(jobs[i])
+	}
+
+	return reply, nil
+}
+
 func (k *KVService) ListAsyncJobs(
 	ctx context.Context, msg *ListAsyncJobsMsg) (*ListAsyncJobsReply, error) {
 	reply := &ListAsyncJobsReply{}
 	var err error
-	reply.Jobs, err = k.store.ListAsyncJobs(
+	reply.Jobs, err = k.kv.ListAsyncJobs(
 		msg.Device, int(msg.Policy), msg.Position, int(msg.Pagination))
 	if err != nil {
 		glogger.Error("unable to list async jobs", zap.Error(err))
+	}
+
+	if len(reply.Jobs) == 0 && k.fs != nil {
+		return k.listFSAsyncJobs(msg.Device, int(msg.Policy), int(msg.Pagination))
 	}
 
 	return reply, nil
@@ -64,10 +91,24 @@ func (k *KVService) ListAsyncJobs(
 
 func (k *KVService) CleanAsyncJob(
 	ctx context.Context, msg *CleanAsyncJobMsg) (*CleanAsyncJobReply, error) {
-	err := k.store.CleanAsyncJob(msg.Job)
+	err := k.kv.CleanAsyncJob(msg.Job)
 	if err != nil {
 		glogger.Error("unable to clean async job", zap.Error(err))
 	}
 
 	return &CleanAsyncJobReply{Success: err == nil}, nil
+}
+
+func NewKVService(kv *KVStore, rpcPort int) *KVService {
+	return &KVService{
+		kv:   kv,
+		port: rpcPort,
+	}
+}
+func NewKVFSService(fs *FSStore, kv *KVStore, rpcPort int) *KVService {
+	return &KVService{
+		kv:   kv,
+		port: rpcPort,
+		fs:   fs,
+	}
 }
