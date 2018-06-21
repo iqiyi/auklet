@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/AndreasBriese/bbloom"
 	"go.uber.org/zap"
 
 	"github.com/iqiyi/auklet/common"
@@ -19,6 +20,8 @@ import (
 const (
 	ASYNC_JOB_DIR_PREFIX = "async_pending"
 	ASYNC_JOB_BUF_SIZE   = 256
+	BLOOMFILTER_ENTRIES  = 8096.0
+	BLOOMFILTER_FP_RATIO = 0.01
 )
 
 // I'm afraid we can't reuse here KVAsyncJob since FSAsyncJobMgr
@@ -60,6 +63,7 @@ type FSAsyncJobMgr struct {
 	hashSuffix string
 	driveRoot  string
 	jobs       map[string][]*FSAsyncJob
+	filter     bbloom.Bloom
 }
 
 func (m *FSAsyncJobMgr) New(vars, headers map[string]string) AsyncJob {
@@ -141,6 +145,15 @@ func (m *FSAsyncJobMgr) listAsyncJobs(
 		}
 
 		for _, j := range list {
+			k := []byte(j)
+			if m.filter.Has(k) {
+				continue
+			}
+			if m.filter.ElemNum > uint64(BLOOMFILTER_ENTRIES) {
+				m.filter = bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO)
+			}
+			m.filter.AddTS(k)
+
 			b, err := ioutil.ReadFile(filepath.Join(d, j))
 			if err != nil {
 				glogger.Error("unable to read async job file",
@@ -207,6 +220,7 @@ func NewFSAsyncJobMgr(driveRoot string) (*FSAsyncJobMgr, error) {
 	mgr := &FSAsyncJobMgr{
 		driveRoot: driveRoot,
 		jobs:      make(map[string][]*FSAsyncJob),
+		filter:    bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO),
 	}
 
 	var err error
