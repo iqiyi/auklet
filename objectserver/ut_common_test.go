@@ -58,3 +58,16 @@ func expctedEqual(t *testing.T, expected, actual []AsyncJob) {
 	sort.Slice(actual, func(i, j int) bool { return actual[i].GetAccount() < actual[j].GetAccount() })
 	require.Equal(t, expected, actual)
 }
+
+func newFSAsyncJob() *FSAsyncJob {
+	ts := common.GetTimestamp()
+	return &FSAsyncJob{
+		Method:    http.MethodPut,
+		Account:   fmt.Sprintf("a-%d", rand.Int63()),
+		Container: fmt.Sprintf("a-%d", rand.Int63()),
+		Object:    fmt.Sprintf("a-%d", rand.Int63()),
+		Headers:   map[string]string{common.XTimestamp: ts},
+		Device:    TEST_DEVICE,
+		Policy:    0,
+	}
+}
