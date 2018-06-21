@@ -14,9 +14,8 @@ const (
 )
 
 type KVAsyncJobMgr struct {
-	rpc       KVServiceClient
-	jobs      map[string][]*KVAsyncJob
-	positions map[string]*KVAsyncJob
+	rpc  KVServiceClient
+	jobs map[string][]*KVAsyncJob
 }
 
 func (m *KVAsyncJobMgr) New(vars, headers map[string]string) AsyncJob {
@@ -59,7 +58,6 @@ func (m *KVAsyncJobMgr) Next(device string, policy int) AsyncJob {
 			Device:     device,
 			Policy:     int32(policy),
 			Pagination: KV_JOBS_PAGINATION,
-			Position:   m.positions[idx],
 		}
 		reply, err := m.rpc.ListAsyncJobs(ctx, msg)
 		if err != nil {
@@ -76,7 +74,6 @@ func (m *KVAsyncJobMgr) Next(device string, policy int) AsyncJob {
 	next := buf[0]
 	buf = buf[1:]
 	m.jobs[idx] = buf
-	m.positions[idx] = next
 
 	return next
 }
@@ -107,9 +104,8 @@ func NewKVAsyncJobMgr(port int) (*KVAsyncJobMgr, error) {
 	}
 
 	mgr := &KVAsyncJobMgr{
-		rpc:       NewKVServiceClient(conn),
-		jobs:      make(map[string][]*KVAsyncJob),
-		positions: make(map[string]*KVAsyncJob),
+		rpc:  NewKVServiceClient(conn),
+		jobs: make(map[string][]*KVAsyncJob),
 	}
 
 	return mgr, nil

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/AndreasBriese/bbloom"
 	"github.com/golang/protobuf/proto"
 	rocksdb "github.com/tecbot/gorocksdb"
 	"go.uber.org/zap"
@@ -25,6 +26,7 @@ type KVStore struct {
 	ropt       *rocksdb.ReadOptions
 	dbs        map[string]*rocksdb.DB
 	testMode   bool
+	filter     bbloom.Bloom
 
 	sync.RWMutex
 }
@@ -192,8 +194,8 @@ func (s *KVStore) SaveAsyncJob(job *KVAsyncJob) error {
 	return db.Put(s.wopt, key, val)
 }
 
-func (s *KVStore) ListAsyncJobs(device string, policy int,
-	position *KVAsyncJob, num int) ([]*KVAsyncJob, error) {
+func (s *KVStore) ListAsyncJobs(
+	device string, policy int, num int) ([]*KVAsyncJob, error) {
 	db := s.getDB(device)
 	if db == nil {
 		return nil, ErrAsyncJobDBNotFound
@@ -203,20 +205,21 @@ func (s *KVStore) ListAsyncJobs(device string, policy int,
 	iter := db.NewIterator(s.ropt)
 	defer iter.Close()
 
-	p := s.asyncJobKey(position)
-	if p == "" {
-		p = s.asyncJobPrefix(policy)
-	}
+	p := s.asyncJobPrefix(policy)
 	for iter.Seek([]byte(p)); iter.Valid() && num > 0; iter.Next() {
-		key := string(iter.Key().Data())
-		if key == p {
+		key := iter.Key().Data()
+		if s.filter.Has(key) {
 			continue
 		}
+		if s.filter.ElemNum > uint64(BLOOMFILTER_ENTRIES) {
+			s.filter = bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO)
+		}
+		s.filter.AddTS(key)
 
 		job := new(KVAsyncJob)
 		if err := proto.Unmarshal(iter.Value().Data(), job); err != nil {
 			glogger.Error("unable to unmarshal pending job",
-				zap.String("object-key", key), zap.Error(err))
+				zap.String("object-key", string(key)), zap.Error(err))
 			continue
 		}
 
@@ -244,6 +247,7 @@ func NewKVStore(driveRoot string, ringPort int) *KVStore {
 		wopt:      rocksdb.NewDefaultWriteOptions(),
 		ropt:      rocksdb.NewDefaultReadOptions(),
 		ringPort:  ringPort,
+		filter:    bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO),
 	}
 
 	var err error

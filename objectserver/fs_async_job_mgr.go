@@ -20,8 +20,6 @@ import (
 const (
 	ASYNC_JOB_DIR_PREFIX = "async_pending"
 	ASYNC_JOB_BUF_SIZE   = 256
-	BLOOMFILTER_ENTRIES  = 8096.0
-	BLOOMFILTER_FP_RATIO = 0.01
 )
 
 // I'm afraid we can't reuse here KVAsyncJob since FSAsyncJobMgr

@@ -72,7 +72,7 @@ func TestSaveAsyncJob(t *testing.T) {
 
 	job := newKVAsyncJob()
 	require.Nil(t, s.SaveAsyncJob(job))
-	jobs, _ := s.ListAsyncJobs(TEST_DEVICE, 0, nil, KV_JOBS_PAGINATION)
+	jobs, _ := s.ListAsyncJobs(TEST_DEVICE, 0, KV_JOBS_PAGINATION)
 	require.Equal(t, job, jobs[0])
 }
 
@@ -89,7 +89,7 @@ func TestListAsyncJobs(t *testing.T) {
 	s.SaveAsyncJob(job1)
 	s.SaveAsyncJob(job2)
 
-	jobs, err := s.ListAsyncJobs(TEST_DEVICE, 0, nil, KV_JOBS_PAGINATION)
+	jobs, err := s.ListAsyncJobs(TEST_DEVICE, 0, KV_JOBS_PAGINATION)
 	require.Nil(t, err)
 
 	expected := []AsyncJob{job1, job2}
@@ -106,6 +106,6 @@ func TestFinishAsyncJob(t *testing.T) {
 	job := newKVAsyncJob()
 	s.SaveAsyncJob(job)
 	require.Nil(t, s.CleanAsyncJob(job))
-	jobs, _ := s.ListAsyncJobs(TEST_DEVICE, 0, nil, KV_JOBS_PAGINATION)
+	jobs, _ := s.ListAsyncJobs(TEST_DEVICE, 0, KV_JOBS_PAGINATION)
 	require.Len(t, jobs, 0)
 }

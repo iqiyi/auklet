@@ -7,6 +7,11 @@ import (
 	"github.com/iqiyi/auklet/common/fs"
 )
 
+const (
+	BLOOMFILTER_ENTRIES  = 8096.0
+	BLOOMFILTER_FP_RATIO = 0.01
+)
+
 type AsyncJob interface {
 	GetMethod() string
 	GetHeaders() map[string]string
@@ -73,6 +78,5 @@ func NewAsyncJobMgr(cnf conf.Config, flags *flag.FlagSet) (AsyncJobMgr, error) {
 		return initKVAsyncJobMgr(cnf, flags)
 	default:
 		return nil, ErrUnknownAsyncJobMgr
-
 	}
 }

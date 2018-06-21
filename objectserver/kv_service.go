@@ -77,7 +77,7 @@ func (k *KVService) ListAsyncJobs(
 	reply := &ListAsyncJobsReply{}
 	var err error
 	reply.Jobs, err = k.kv.ListAsyncJobs(
-		msg.Device, int(msg.Policy), msg.Position, int(msg.Pagination))
+		msg.Device, int(msg.Policy), int(msg.Pagination))
 	if err != nil {
 		glogger.Error("unable to list async jobs", zap.Error(err))
 	}

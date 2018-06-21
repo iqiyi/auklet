@@ -36,7 +36,6 @@ message ListAsyncJobsMsg {
     string device = 1;
     int32 policy = 2;
     int32 pagination = 3;
-    KVAsyncJob position = 4;
 }
 
 message ListAsyncJobsReply {
