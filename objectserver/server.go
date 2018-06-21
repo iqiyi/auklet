@@ -34,6 +34,7 @@ import (
 
 	"github.com/iqiyi/auklet/common"
 	"github.com/iqiyi/auklet/common/conf"
+	"github.com/iqiyi/auklet/common/fs"
 	"github.com/iqiyi/auklet/common/middleware"
 	"github.com/iqiyi/auklet/common/srv"
 	"github.com/iqiyi/auklet/objectserver/engine"
@@ -168,9 +169,40 @@ func (s *ObjectServer) Start() error {
 	return s.Serve(sock)
 }
 
+func startKVRpcService(cnf conf.Config, flags *flag.FlagSet) {
+	driveRoot := cnf.GetDefault("app:object-server", "devices", "/srv/node")
+
+	ringPort := int(cnf.GetInt("DEFAULT", "bind_port", 6000))
+	kv := NewKVStore(driveRoot, ringPort)
+	test := cnf.GetBool("app:object-server", "test_mode", false)
+	if !test {
+		m := fs.NewMountMonitor()
+		m.RegisterCallback("async-job-mgr", kv.mountListener)
+		go m.Start()
+	} else {
+		kv.setTestMode(true)
+	}
+
+	var rpcSvc *KVService
+	rpcPort := int(cnf.GetInt("app:object-server", "async_kv_service_port", 60001))
+	if cnf.GetBool("app:object-server", "async_kv_fs_compatible", false) {
+		fs := NewFSStore(driveRoot)
+		rpcSvc = NewKVFSService(fs, kv, rpcPort)
+	} else {
+		rpcSvc = NewKVService(kv, rpcPort)
+	}
+
+	go rpcSvc.start()
+}
+
 func (s *ObjectServer) initAsyncJobMgr(
 	cnf conf.Config, flags *flag.FlagSet) error {
 	var err error
+	mgr := cnf.GetDefault("app:object-server", "async_job_manager", "fs")
+	if mgr == "kv" {
+		startKVRpcService(cnf, flags)
+	}
+
 	s.asyncJobMgr, err = NewAsyncJobMgr(cnf, flags)
 	if err != nil {
 		common.BootstrapLogger.Printf("unable to initialize kv async job mgr: %v", err)
