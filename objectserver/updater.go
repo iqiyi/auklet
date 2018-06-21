@@ -77,7 +77,7 @@ func (u *Updater) updateContainer(job AsyncJob) bool {
 		}
 	}
 
-	return successes >= (int(u.cRing.ReplicaCount()/2) + 1)
+	return successes == int(u.cRing.ReplicaCount())
 }
 
 func (u *Updater) updateDevice(
