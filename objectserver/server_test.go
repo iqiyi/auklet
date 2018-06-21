@@ -120,8 +120,8 @@ test_mode = yes
 	server.hashSuffix = "changeme"
 
 	mgr := server.asyncJobMgr.(*FSAsyncJobMgr)
-	mgr.hashPrefix = server.hashPrefix
-	mgr.hashSuffix = server.hashSuffix
+	mgr.store.hashPrefix = server.hashPrefix
+	mgr.store.hashSuffix = server.hashSuffix
 
 	return &TestServer{
 		Server:    ts,

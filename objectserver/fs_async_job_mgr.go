@@ -58,29 +58,14 @@ func (j *FSAsyncJob) GetHeaders() map[string]string {
 	return j.Headers
 }
 
-type FSAsyncJobMgr struct {
+type FSStore struct {
 	hashPrefix string
 	hashSuffix string
 	driveRoot  string
-	jobs       map[string][]*FSAsyncJob
 	filter     bbloom.Bloom
 }
 
-func (m *FSAsyncJobMgr) New(vars, headers map[string]string) AsyncJob {
-	// We can ignore the error safely here
-	p, _ := strconv.Atoi(vars["policy"])
-	return &FSAsyncJob{
-		Method:    vars["method"],
-		Account:   vars["account"],
-		Container: vars["container"],
-		Object:    vars["object"],
-		Device:    vars["device"],
-		Headers:   headers,
-		Policy:    p,
-	}
-}
-
-func (m *FSAsyncJobMgr) asyncJobDir(policy int) string {
+func (s *FSStore) asyncJobDir(policy int) string {
 	suffix := ""
 	if policy != 0 {
 		suffix = fmt.Sprintf("-%d", policy)
@@ -89,32 +74,32 @@ func (m *FSAsyncJobMgr) asyncJobDir(policy int) string {
 	return fmt.Sprintf("%s%s", ASYNC_JOB_DIR_PREFIX, suffix)
 }
 
-func (m *FSAsyncJobMgr) asyncJobPath(job *FSAsyncJob) string {
+func (s *FSStore) asyncJobPath(job *FSAsyncJob) string {
 	hash := common.HashObjectName(
-		m.hashPrefix, job.Account, job.Container, job.Object, m.hashSuffix)
+		s.hashPrefix, job.Account, job.Container, job.Object, s.hashSuffix)
 	name := fmt.Sprintf("%s-%s", hash, job.Headers[common.XTimestamp])
 	return filepath.Join(
-		m.driveRoot, job.Device, m.asyncJobDir(job.Policy), hash[29:32], name)
+		s.driveRoot, job.Device, s.asyncJobDir(job.Policy), hash[29:32], name)
 }
 
-func (m *FSAsyncJobMgr) Save(job AsyncJob) error {
-	j := job.(*FSAsyncJob)
-	p := m.asyncJobPath(j)
+func (s *FSStore) SaveAsyncJob(job *FSAsyncJob) error {
+	p := s.asyncJobPath(job)
 	dir := filepath.Dir(p)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		glogger.Error("unable to create dir for async job",
 			zap.String("path", dir), zap.Error(err))
 		return err
 	}
-	t := fs.TempDir(m.driveRoot, j.Device, j.Policy)
+
+	t := fs.TempDir(s.driveRoot, job.Device, job.Policy)
 	w, err := fs.NewAtomicFileWriter(t, dir)
 	if err != nil {
 		glogger.Error("unable to create afw for async job", zap.Error(err))
 		return err
 	}
-
 	defer w.Abandon()
-	if _, err := w.Write(pickle.PickleDumps(j)); err != nil {
+
+	if _, err := w.Write(pickle.PickleDumps(job)); err != nil {
 		glogger.Error("unable to write async job", zap.Error(err))
 		return err
 	}
@@ -122,14 +107,14 @@ func (m *FSAsyncJobMgr) Save(job AsyncJob) error {
 	return w.Save(p)
 }
 
-func (m *FSAsyncJobMgr) listAsyncJobs(
-	device string, policy, num int) []*FSAsyncJob {
+func (s *FSStore) ListAsyncJobs(
+	device string, policy int, num int) ([]*FSAsyncJob, error) {
 	p := filepath.Join(
-		m.driveRoot, device, m.asyncJobDir(policy), "[a-f0-9][a-f0-9][a-f0-9]")
+		s.driveRoot, device, s.asyncJobDir(policy), "[a-f0-9][a-f0-9][a-f0-9]")
 	dirs, err := filepath.Glob(p)
 	if err != nil {
 		glogger.Error("unable to list suffixes", zap.String("path", p))
-		return nil
+		return nil, err
 	}
 	rand.Shuffle(len(dirs), func(i, j int) {
 		dirs[i], dirs[j] = dirs[j], dirs[i]
@@ -146,13 +131,13 @@ func (m *FSAsyncJobMgr) listAsyncJobs(
 
 		for _, j := range list {
 			k := []byte(j)
-			if m.filter.Has(k) {
+			if s.filter.Has(k) {
 				continue
 			}
-			if m.filter.ElemNum > uint64(BLOOMFILTER_ENTRIES) {
-				m.filter = bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO)
+			if s.filter.ElemNum > uint64(BLOOMFILTER_ENTRIES) {
+				s.filter = bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO)
 			}
-			m.filter.AddTS(k)
+			s.filter.AddTS(k)
 
 			b, err := ioutil.ReadFile(filepath.Join(d, j))
 			if err != nil {
@@ -173,19 +158,78 @@ func (m *FSAsyncJobMgr) listAsyncJobs(
 
 			jobs = append(jobs, aj)
 			if len(jobs) >= num {
-				return jobs
+				return jobs, nil
 			}
 		}
 	}
 
-	return jobs
+	return jobs, nil
+}
+
+func (s *FSStore) CleanAsyncJob(job *FSAsyncJob) error {
+	p := s.asyncJobPath(job)
+	if err := os.Remove(p); err != nil {
+		glogger.Error("unable to remove async job file",
+			zap.String("path", p), zap.Error(err))
+		return err
+	}
+
+	// If there is any other entry, directory not empty error will be raised.
+	// So we simply ignore the error here
+	os.Remove(filepath.Dir(p))
+
+	return nil
+}
+
+func NewFSStore(driveRoot string) (*FSStore, error) {
+	s := &FSStore{
+		driveRoot: driveRoot,
+		filter:    bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO),
+	}
+
+	var err error
+	s.hashPrefix, s.hashSuffix, err = conf.GetHashPrefixAndSuffix()
+	if err != nil {
+		glogger.Error("unable to find hash prefix/suffix", zap.Error(err))
+		return nil, err
+	}
+
+	return s, nil
+}
+
+type FSAsyncJobMgr struct {
+	store *FSStore
+	jobs  map[string][]*FSAsyncJob
+}
+
+func (m *FSAsyncJobMgr) New(vars, headers map[string]string) AsyncJob {
+	// We can ignore the error safely here
+	p, _ := strconv.Atoi(vars["policy"])
+	return &FSAsyncJob{
+		Method:    vars["method"],
+		Account:   vars["account"],
+		Container: vars["container"],
+		Object:    vars["object"],
+		Device:    vars["device"],
+		Headers:   headers,
+		Policy:    p,
+	}
+}
+
+func (m *FSAsyncJobMgr) Save(job AsyncJob) error {
+	return m.store.SaveAsyncJob(job.(*FSAsyncJob))
 }
 
 func (m *FSAsyncJobMgr) Next(device string, policy int) AsyncJob {
 	idx := fmt.Sprintf("%s-%d", device, policy)
 	buf := m.jobs[idx]
 	if len(buf) == 0 {
-		buf = m.listAsyncJobs(device, policy, ASYNC_JOB_BUF_SIZE)
+		var err error
+		buf, err = m.store.ListAsyncJobs(device, policy, ASYNC_JOB_BUF_SIZE)
+		if err != nil {
+			glogger.Error("unable to list fs async jobs", zap.Error(err))
+			return nil
+		}
 	}
 
 	if len(buf) == 0 {
@@ -200,34 +244,17 @@ func (m *FSAsyncJobMgr) Next(device string, policy int) AsyncJob {
 }
 
 func (m *FSAsyncJobMgr) Finish(job AsyncJob) error {
-	j := job.(*FSAsyncJob)
-	p := m.asyncJobPath(j)
-
-	if err := os.Remove(p); err != nil {
-		glogger.Error("unable to remove async job file",
-			zap.String("path", p), zap.Error(err))
-		return err
-	}
-
-	// If there is any other entry, directory not empty error will be raised.
-	// So we simply ignore the error here
-	os.Remove(filepath.Dir(p))
-
-	return nil
+	return m.store.CleanAsyncJob(job.(*FSAsyncJob))
 }
 
 func NewFSAsyncJobMgr(driveRoot string) (*FSAsyncJobMgr, error) {
-	mgr := &FSAsyncJobMgr{
-		driveRoot: driveRoot,
-		jobs:      make(map[string][]*FSAsyncJob),
-		filter:    bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO),
-	}
-
-	var err error
-	mgr.hashPrefix, mgr.hashSuffix, err = conf.GetHashPrefixAndSuffix()
+	s, err := NewFSStore(driveRoot)
 	if err != nil {
-		glogger.Error("unable to find hash prefix/suffix", zap.Error(err))
 		return nil, err
+	}
+	mgr := &FSAsyncJobMgr{
+		store: s,
+		jobs:  make(map[string][]*FSAsyncJob),
 	}
 
 	return mgr, nil
