@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	BLOOMFILTER_ENTRIES  = 8096.0
-	BLOOMFILTER_FP_RATIO = 0.01
+	BLOOMFILTER_ENTRIES           = float64(1 << 16)
+	BLOOMFILTER_FP_RATIO          = float64(0.01)
+	BLOOMFILTER_RESET_THREASHHOLD = 1 << 16
 )
 
 type AsyncJob interface {

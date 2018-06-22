@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync/atomic"
 
 	"github.com/AndreasBriese/bbloom"
 	"go.uber.org/zap"
@@ -61,6 +62,7 @@ type FSStore struct {
 	hashSuffix string
 	driveRoot  string
 	filter     bbloom.Bloom
+	counter    int64
 }
 
 func (s *FSStore) asyncJobDir(policy int) string {
@@ -128,15 +130,21 @@ func (s *FSStore) ListAsyncJobs(
 		}
 
 		for _, j := range list {
-			k := []byte(j)
-			if s.filter.Has(k) {
+			bk := []byte(j)
+			if s.filter.Has(bk) {
+				glogger.Debug("ignore listed entry", zap.String("entry", j))
 				continue
 			}
-			if s.filter.ElemNum > uint64(BLOOMFILTER_ENTRIES) {
-				s.filter = bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO)
+			s.filter.AddTS(bk)
+			atomic.AddInt64(&s.counter, 1)
+			cnt := atomic.LoadInt64(&s.counter)
+			if cnt > int64(BLOOMFILTER_RESET_THREASHHOLD) {
+				glogger.Info("reset bloom filter", zap.Int64("elements", cnt))
+				s.filter.Clear()
 			}
-			s.filter.AddTS(k)
 
+			glogger.Debug("add unlisted entry",
+				zap.String("entry", j), zap.Int64("elements", cnt))
 			b, err := ioutil.ReadFile(filepath.Join(d, j))
 			if err != nil {
 				glogger.Error("unable to read async job file",

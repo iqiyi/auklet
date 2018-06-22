@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 
 	"github.com/AndreasBriese/bbloom"
 	"github.com/golang/protobuf/proto"
@@ -27,6 +28,7 @@ type KVStore struct {
 	dbs        map[string]*rocksdb.DB
 	testMode   bool
 	filter     bbloom.Bloom
+	counter    int64
 
 	sync.RWMutex
 }
@@ -211,11 +213,16 @@ func (s *KVStore) ListAsyncJobs(
 		if s.filter.Has(key) {
 			continue
 		}
-		if s.filter.ElemNum > uint64(BLOOMFILTER_ENTRIES) {
-			s.filter = bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO)
-		}
 		s.filter.AddTS(key)
+		atomic.AddInt64(&s.counter, 1)
+		cnt := atomic.LoadInt64(&s.counter)
+		if cnt > int64(BLOOMFILTER_RESET_THREASHHOLD) {
+			glogger.Info("reset bloom filter", zap.Int64("elements", cnt))
+			s.filter.Clear()
+		}
 
+		glogger.Debug("add unlisted entry",
+			zap.String("entry", string(key)), zap.Int64("elements", cnt))
 		job := new(KVAsyncJob)
 		if err := proto.Unmarshal(iter.Value().Data(), job); err != nil {
 			glogger.Error("unable to unmarshal pending job",
