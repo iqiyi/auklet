@@ -26,7 +26,6 @@ bytes_per_second = 5000000
 
 ### Pack Engine
 * `lazy_migration` controls whether to enable lazy migration or not. Note, we have not run that in production environment.
-* `test_mode` means there is no need to use a mounted file system as the device, designed for unit test, so ignore it in production environment.
 * `pack_chunked_object` controls whether to put objects whose size is unknown at first into the bundle file or not. In HTTP protocol, it is impossible to know the exact size of object if it is sent by `chunked-encoding`. If this option is disabled, then objects sent by `chunked-encoding` will be save as standalone files like replication engine, otherwise it would be save into bundle file.
 
 ```
@@ -34,4 +33,18 @@ bytes_per_second = 5000000
 lazy_migration = no
 test_mode = no
 pack_chunked_object = no
+```
+
+### Object Server
+* `test_mode` means there is no need to use a mounted file system as the device, designed for unit test, so ignore it in production environment.
+* `async_job_manager` chooses the type of async job manager. So far only `kv` which save async jobs in RocksDB and `fs` which is Go version Swift.
+* `async_kv_service_port` since RocksDB does not support concurrency access from multiple processes, we provides the API through gRPC and this is the RPC server port.
+* `async_kv_fs_compatible` migrates the legacy async jobs into RocksDB lazily.
+
+```
+[app:object-server]
+# test_mode = no
+# async_job_manager = fs
+# async_kv_service_port = 60001
+# async_kv_fs_compatible = no
 ```
