@@ -49,10 +49,12 @@ func toGeneric(orig []*KVAsyncJob) []AsyncJob {
 }
 
 func expctedEqual(t *testing.T, expected, actual []AsyncJob) {
-	require.Equal(t, len(expected), len(actual))
-	if expected == nil {
+	if expected == nil && actual == nil {
 		return
 	}
+
+	require.NotNil(t, expected)
+	require.NotNil(t, actual)
 
 	sort.Slice(expected, func(i, j int) bool { return expected[i].GetAccount() < expected[j].GetAccount() })
 	sort.Slice(actual, func(i, j int) bool { return actual[i].GetAccount() < actual[j].GetAccount() })

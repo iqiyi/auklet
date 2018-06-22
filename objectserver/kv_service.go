@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/AndreasBriese/bbloom"
 	"go.uber.org/zap"
 	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -12,10 +13,11 @@ import (
 )
 
 type KVService struct {
-	kv   *KVStore
-	port int
-	srv  *grpc.Server
-	fs   *FSStore
+	kv     *KVStore
+	port   int
+	srv    *grpc.Server
+	fs     *FSStore
+	filter bbloom.Bloom
 }
 
 func (k *KVService) start() {
@@ -66,7 +68,19 @@ func (k *KVService) listFSAsyncJobs(
 
 	reply.Jobs = make([]*KVAsyncJob, len(jobs))
 	for i := range jobs {
-		reply.Jobs[i] = k.convertFSJob(jobs[i])
+		j := k.convertFSJob(jobs[i])
+
+		// We need to migrate the FS job into DB in order to clean it later
+		if err := k.kv.SaveAsyncJob(j); err != nil {
+			glogger.Error("unable to migrate fs job to kv", zap.Error(err))
+			continue
+		}
+		if err := k.fs.CleanAsyncJob(jobs[i]); err != nil {
+			glogger.Error("unable to clean fs job", zap.Error(err))
+			continue
+		}
+
+		reply.Jobs[i] = j
 	}
 
 	return reply, nil
@@ -79,11 +93,19 @@ func (k *KVService) ListAsyncJobs(
 	reply.Jobs, err = k.kv.ListAsyncJobs(
 		msg.Device, int(msg.Policy), int(msg.Pagination))
 	if err != nil {
-		glogger.Error("unable to list async jobs", zap.Error(err))
+		glogger.Error("unable to list kv async jobs", zap.Error(err))
 	}
 
 	if len(reply.Jobs) == 0 && k.fs != nil {
-		return k.listFSAsyncJobs(msg.Device, int(msg.Policy), int(msg.Pagination))
+		reply, err = k.listFSAsyncJobs(
+			msg.Device, int(msg.Policy), int(msg.Pagination))
+		if err != nil {
+			glogger.Error("unable to list fs async jobs", zap.Error(err))
+		}
+	}
+
+	if len(reply.Jobs) == 0 {
+		k.filter.Clear()
 	}
 
 	return reply, nil
@@ -106,9 +128,15 @@ func NewKVService(kv *KVStore, rpcPort int) *KVService {
 	}
 }
 func NewKVFSService(fs *FSStore, kv *KVStore, rpcPort int) *KVService {
+	// Share the same filter instance
+	filter := bbloom.New(BLOOMFILTER_ENTRIES, BLOOMFILTER_FP_RATIO)
+	kv.filter = filter
+	fs.filter = filter
+
 	return &KVService{
-		kv:   kv,
-		port: rpcPort,
-		fs:   fs,
+		kv:     kv,
+		port:   rpcPort,
+		fs:     fs,
+		filter: filter,
 	}
 }

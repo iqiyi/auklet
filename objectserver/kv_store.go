@@ -209,11 +209,13 @@ func (s *KVStore) ListAsyncJobs(
 
 	p := s.asyncJobPrefix(policy)
 	for iter.Seek([]byte(p)); iter.Valid() && num > 0; iter.Next() {
-		key := iter.Key().Data()
-		if s.filter.Has(key) {
+		key := string(iter.Key().Data())
+		bfk := []byte(filepath.Base(key))
+		if s.filter.Has(bfk) {
+			glogger.Debug("ignore listed entry", zap.String("entry", string(bfk)))
 			continue
 		}
-		s.filter.AddTS(key)
+		s.filter.AddTS(bfk)
 		atomic.AddInt64(&s.counter, 1)
 		cnt := atomic.LoadInt64(&s.counter)
 		if cnt > int64(BLOOMFILTER_RESET_THREASHHOLD) {
@@ -222,11 +224,12 @@ func (s *KVStore) ListAsyncJobs(
 		}
 
 		glogger.Debug("add unlisted entry",
-			zap.String("entry", string(key)), zap.Int64("elements", cnt))
+			zap.String("entry", string(bfk)), zap.Int64("elements", cnt))
+
 		job := new(KVAsyncJob)
 		if err := proto.Unmarshal(iter.Value().Data(), job); err != nil {
-			glogger.Error("unable to unmarshal pending job",
-				zap.String("object-key", string(key)), zap.Error(err))
+			glogger.Error("unable to unmarshal async pending job",
+				zap.String("entry", string(key)), zap.Error(err))
 			continue
 		}
 

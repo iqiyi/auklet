@@ -145,6 +145,7 @@ func (s *FSStore) ListAsyncJobs(
 
 			glogger.Debug("add unlisted entry",
 				zap.String("entry", j), zap.Int64("elements", cnt))
+
 			b, err := ioutil.ReadFile(filepath.Join(d, j))
 			if err != nil {
 				glogger.Error("unable to read async job file",
