@@ -35,7 +35,12 @@ type DumpDBCommand struct {
 
 func (c *DumpDBCommand) Help() string {
 	helpText := `
-Usage: auklet dump-db -d db -p prefix
+Usage: auklet dump-db -d [db] -p [prefix] -t [index/async]
+
+Dump the content of RocksDB. Both pack engine meta DB and async job DB are supported.
+
+auklet dump-db -d /srv/node/vde/async-jobs -p /async -t async
+auklet dump-db -d /srv/node/vde/pack-meta -p /0/ -t index
 `
 	return strings.TrimSpace(helpText)
 }
