@@ -1,17 +1,17 @@
 // Copyright (c) 2016-2018 iQIYI.com.  All rights reserved.
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 //     http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// 
+//
 
 package pack
 
@@ -37,14 +37,12 @@ func TestInitPackEngine(t *testing.T) {
 	defer os.RemoveAll(root)
 
 	confTemplate := `
-[object-pack]
-test_mode = yes
-
 [app:object-server]
 devices=%s
 mount_check=false
 bind_port=%d
 rpc_port=%d
+test_mode = yes
 	`
 	configString := fmt.Sprintf(confTemplate, root,
 		common.RandIntInRange(40000, 50000), common.RandIntInRange(50001, 60000))
@@ -73,10 +71,8 @@ func TestPackEngineNewObject1(t *testing.T) {
 	defer os.RemoveAll(root)
 
 	confTemplate := `
-[object-pack]
-test_mode = yes
-
 [app:object-server]
+test_mode = yes
 devices=%s
 mount_check=false
 bind_port=%d
@@ -119,14 +115,12 @@ func TestPackEngineNewObject2(t *testing.T) {
 	defer os.RemoveAll(root)
 
 	confTemplate := `
-[object-pack]
-test_mode = yes
-
 [app:object-server]
 devices=%s
 mount_check=false
 bind_port=%d
 rpc_port=%d
+test_mode = yes
 	`
 	configString := fmt.Sprintf(confTemplate, root,
 		common.RandIntInRange(40000, 50000), common.RandIntInRange(50001, 60000))

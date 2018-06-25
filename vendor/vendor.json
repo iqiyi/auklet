@@ -3,6 +3,12 @@
 	"ignore": "",
 	"package": [
 		{
+			"checksumSHA1": "i7GJJLQpsYTH/0dM+HcbTfmBnQU=",
+			"path": "github.com/AndreasBriese/bbloom",
+			"revision": "28f7e881ca57bc00e028f9ede9f0d9104cfeef5e",
+			"revisionTime": "2017-07-02T08:40:17Z"
+		},
+		{
 			"checksumSHA1": "45fWXfW8W489FQh03+8UPIEX8dA=",
 			"path": "github.com/apache/thrift/lib/go/thrift",
 			"revision": "0eda909573cc7d8550c285035652e8b883ebc8f7",
@@ -98,6 +104,12 @@
 			"path": "github.com/gholt/brimtext",
 			"revision": "d5c8037dd915d7fdb2959d974885a2e82f97aff3",
 			"revisionTime": "2017-07-20T06:37:18Z"
+		},
+		{
+			"checksumSHA1": "Ns+xeoCzeImqfisQ768zWXWLWWs=",
+			"path": "github.com/go-errors/errors",
+			"revision": "a6af135bd4e28680facf08a3d206b454abc877a4",
+			"revisionTime": "2018-02-26T18:00:45Z"
 		},
 		{
 			"checksumSHA1": "5SusLlYpervGPhrlkj+GmJrie6o=",

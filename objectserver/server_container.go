@@ -16,20 +16,13 @@
 package objectserver
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
-	"io"
 	"math/big"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/iqiyi/auklet/common"
-	"github.com/iqiyi/auklet/common/fs"
 	"github.com/iqiyi/auklet/common/middleware"
-	"github.com/iqiyi/auklet/common/pickle"
 	"go.uber.org/zap"
 )
 
@@ -41,11 +34,22 @@ const (
 )
 
 func (s *ObjectServer) hashObjectName(account, container, obj string) string {
-	h := md5.New()
-	text := fmt.Sprintf(
-		"%s/%s/%s/%s%s", s.hashPrefix, account, container, obj, s.hashSuffix)
-	io.WriteString(h, text)
-	return hex.EncodeToString(h.Sum(nil))
+	return common.HashObjectName(
+		s.hashPrefix, account, container, obj, s.hashSuffix)
+}
+
+func (s *ObjectServer) generateVars(
+	method, account, container, object, device, policy string) map[string]string {
+
+	vars := map[string]string{}
+	vars["method"] = method
+	vars["account"] = account
+	vars["container"] = container
+	vars["object"] = object
+	vars["device"] = device
+	vars["policy"] = policy
+
+	return vars
 }
 
 func (s *ObjectServer) expirerContainer(
@@ -88,29 +92,6 @@ func (s *ObjectServer) sendContainerUpdate(
 	return resp.StatusCode/100 == 2
 }
 
-func (s *ObjectServer) saveAsync(
-	method, account, container, obj, localDevice string, headers http.Header) {
-	hash := s.hashObjectName(account, container, obj)
-	asyncFile := filepath.Join(s.driveRoot, localDevice, "async_pending",
-		hash[29:32], hash+"-"+headers.Get(common.XTimestamp))
-	tempDir := fs.TempDir(s.driveRoot, localDevice)
-	data := map[string]interface{}{
-		"op":        method,
-		"account":   account,
-		"container": container,
-		"obj":       obj,
-		"headers":   common.Headers2Map(headers),
-	}
-	if os.MkdirAll(filepath.Dir(asyncFile), 0755) == nil {
-		writer, err := fs.NewAtomicFileWriter(tempDir, filepath.Dir(asyncFile))
-		if err == nil {
-			defer writer.Abandon()
-			writer.Write(pickle.PickleDumps(data))
-			writer.Save(asyncFile)
-		}
-	}
-}
-
 func (s *ObjectServer) updateContainer(
 	metadata map[string]string, req *http.Request, vars map[string]string) {
 	partition := req.Header.Get(common.XContainerPartition)
@@ -145,9 +126,17 @@ func (s *ObjectServer) updateContainer(
 		}
 	}
 	if failures > 0 {
-		s.saveAsync(req.Method,
-			vars["account"], vars["container"], vars["obj"], vars["device"],
-			headers)
+		vs := s.generateVars(req.Method,
+			vars["account"],
+			vars["container"],
+			vars["obj"],
+			vars["device"],
+			headers.Get(common.XBackendPolicyIndex))
+
+		job := s.asyncJobMgr.New(vs, common.Headers2Map(headers))
+		if err := s.asyncJobMgr.Save(job); err != nil {
+			glogger.Error("unable to save async pending job", zap.Error(err))
+		}
 	}
 }
 
@@ -187,8 +176,16 @@ func (s *ObjectServer) updateDeleteAt(method string, header http.Header,
 		}
 	}
 	if failures > 0 || len(hosts) == 0 {
-		s.saveAsync(method,
-			deleteAtAccount, container, obj, vars["device"], headers)
+		vs := s.generateVars(method,
+			deleteAtAccount,
+			container,
+			obj,
+			vars["device"],
+			headers.Get(common.XBackendPolicyIndex))
+		job := s.asyncJobMgr.New(vs, common.Headers2Map(headers))
+		if err := s.asyncJobMgr.Save(job); err != nil {
+			glogger.Error("unable to save async pending job", zap.Error(err))
+		}
 	}
 }
 

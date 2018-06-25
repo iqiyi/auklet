@@ -224,7 +224,7 @@ func (f *SwiftEngine) New(vars map[string]string,
 		asyncWG:    f.asyncWG,
 	}
 	sor.hashDir = f.objHashDir(vars)
-	sor.tempDir = fs.TempDir(f.driveRoot, vars["device"])
+	sor.tempDir = fs.TempDir(f.driveRoot, vars["device"], f.policy)
 	sor.dataFile, sor.metaFile = ObjectFiles(sor.hashDir)
 	if sor.Exists() {
 		var stat os.FileInfo

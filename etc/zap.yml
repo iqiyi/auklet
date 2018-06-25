@@ -50,6 +50,23 @@ object-server:
   initialFields:
     name: object-server
 
+object-updater:
+  level: debug
+  encoding: json
+  encoderConfig:
+    messageKey: message
+    levelKey: level
+    levelEncoder: lowercase
+    timeKey: ts
+    timeEncoder: ISO8601
+    callerKey: caller
+    callerEncoder: short
+
+  outputPaths:
+    - /var/log/auklet/object-updater.log
+  initialFields:
+    name: object-updater
+
 pack-auditor:
   level: info
   encoding: json

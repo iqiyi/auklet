@@ -21,37 +21,38 @@ import (
 	"log"
 	"strings"
 
-	"github.com/go-errors/errors"
-
 	"github.com/iqiyi/auklet/common/conf"
 	"github.com/iqiyi/auklet/common/srv"
 	"github.com/iqiyi/auklet/objectserver"
 )
 
-type ObjectCommand struct {
+type ObjectUpdaterCommand struct {
 	Logger *log.Logger
 }
 
-func (c *ObjectCommand) Help() string {
+func (c *ObjectUpdaterCommand) Help() string {
 	helpText := `
-Usage: auklet object -c [config]
+Usage: auklet object-updater [-c config] [-once]
 
-  Start Object a server
+  Start object updater
 `
 	return strings.TrimSpace(helpText)
 }
 
-func (c *ObjectCommand) Run(args []string) int {
+func (c *ObjectUpdaterCommand) Run(args []string) int {
 	defer func() {
 		if err := recover(); err != nil {
-			c.Logger.Printf("%s", errors.Wrap(err, 2).ErrorStack())
+			c.Logger.Printf("%v", err)
 		}
 	}()
 
-	flags := flag.NewFlagSet("object server", flag.ExitOnError)
+	flags := flag.NewFlagSet("object updater", flag.ExitOnError)
 	flags.Usage = func() { fmt.Println(c.Help()) }
 	flags.String("c", conf.FindServerConfig("object"), "config file/directory")
 	flags.String("l", "", "zap yaml log config file")
+	flags.Bool("once", false, "run one pass of the updater")
+	flags.String("policies", "", "policy filter")
+	flags.String("devices", "", "device filter")
 	if err := flags.Parse(args); err != nil {
 		return EXIT_USAGE
 	}
@@ -61,14 +62,14 @@ func (c *ObjectCommand) Run(args []string) int {
 		return EXIT_USAGE
 	}
 
-	if err := srv.RunServers(objectserver.InitServer, flags); err != nil {
-		c.Logger.Printf("unable to run object server: %v", err)
+	if err := srv.RunDaemon(objectserver.InitUpdater, flags); err != nil {
+		c.Logger.Printf("unable to run object updater: %v", err)
 		return EXIT_START
 	}
 
 	return EXIT_OK
 }
 
-func (c *ObjectCommand) Synopsis() string {
-	return "start object server"
+func (c *ObjectUpdaterCommand) Synopsis() string {
+	return "start object updater"
 }

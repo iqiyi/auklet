@@ -19,7 +19,7 @@ all: bin/auklet
 
 all_debug:
 	mkdir -p bin
-	go build -o bin/auklet -gcflags='-N -l' -ldflags "-X github.com/iqiyi/auklet/common.Version=$(AUKLET_VERSION)" github.com/iqiyi/auklet/cmd/auklet
+	go build -o bin/auklet -gcflags='all=-N -l' -ldflags "-X github.com/iqiyi/auklet/common.Version=$(AUKLET_VERSION)" github.com/iqiyi/auklet/cmd/auklet
 
 bin/auklet: */*.go */*/*.go
 	mkdir -p bin
