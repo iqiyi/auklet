@@ -115,7 +115,12 @@ func GetFileMTime(filePath string) (int64, error) {
 }
 
 func TempDir(driveRoot, device string, policy int) string {
-	return filepath.Join(driveRoot, device, "tmp")
+	suffix := ""
+	if policy != 0 {
+		suffix = fmt.Sprintf("-%d", policy)
+	}
+
+	return filepath.Join(driveRoot, device, fmt.Sprintf("tmp%s", suffix))
 }
 
 func IsFileNotExist(path string) bool {

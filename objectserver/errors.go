@@ -25,7 +25,7 @@ var (
 	PathNotDirError         = errors.New("path is not a directory")
 	NotPackEngine           = errors.New("engine is not pack type")
 	DriveFull               = errors.New("drive is full")
-	ErrHashConfNotFound     = errors.New("unable to read hash prefix and suffxi")
+	ErrHashConfNotFound     = errors.New("unable to read hash prefix and suffix")
 	ErrAsyncJobDBNotFound   = errors.New("unable to find db for async jobs")
 	ErrKVAsyncJobNotSaved   = errors.New("unable to save async job")
 	ErrKVAsyncJobNotClean   = errors.New("unable to clean async job")
