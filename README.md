@@ -1,7 +1,27 @@
+Table of Contents
+=================
+
+   * [Introduction](#introduction)
+      * [Features](#features)
+      * [Limitation](#limitation)
+      * [Why Auklet](#why-auklet)
+      * [Why build Auklet upon Swift and Hummingbird](#why-build-auklet-upon-swift-and-hummingbird)
+   * [License](#license)
+   * [Getting Started](#getting-started)
+      * [Prepare a native Swift environment](#prepare-a-native-swift-environment)
+      * [Patch the existing Swift](#patch-the-existing-swift)
+      * [Deploy Auklet](#deploy-auklet)
+      * [Have fun](#have-fun)
+   * [Contact](#contact)
+   * [Contributing](#contributing)
+   * [Acknowledgments](#acknowledgments)
+
+Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
+
 # Introduction
 [![Slack](https://auklet-slackin.herokuapp.com/badge.svg)](https://auklet-slackin.herokuapp.com/badge.svg)
 
-Auklet is an reimplementation of OpenSwift Swift object server and aims at solving the problem when serving lots of small files in OpenStack Swift. 
+Auklet is an reimplementation of OpenSwift Swift object server and aims at solving the problem when serving lots of small files in OpenStack Swift.
 
 It is based on 2 existing projects
 
@@ -10,18 +30,18 @@ It is based on 2 existing projects
 
 It does not change any API of OpenStack Swift which means there is no need to change any code of existing clients.
 
-### Features
+## Features
 
 * Keep most of OpenStack Swift feature list
 * Address LOSF problem efficiently
 * Optimization for large object storage. Behaviour like replication engine when object is large.
 * Lazy migration for replication engine(experimental). ZERO migration effort from existing Swift replication engine!
 
-### Limitation
+## Limitation
 
 * No EC support
 
-### Why Auklet
+## Why Auklet
 So why implement a new object server when there are Swift and Hummingbird?
 
 Well, in iQIYI, we have tons of images and text files to save into Swift every day and some use cases are very sensitive to request latency. As we know, Swift supports 2 storage engines, namely erasure coding and replication. Unfortunely, neither of them is adequate to serve lots of small files(LOSF).
@@ -30,10 +50,10 @@ Hummingbird tries to reimplement OpenStack Swift in Golang but it does not addre
 
 Some other open source projects such as[LinkedIn Ambry](https://github.com/linkedin/ambry) are good choices for small files. But at iQIYI, we have already run so many businesses upon Swift that there would be a big bit gap for us to switch to a new storage platform.
 
-### Why build Auklet upon Swift and Hummingbird
+## Why build Auklet upon Swift and Hummingbird
 Why not just build Auklet upon single one platform like Swift or Hummingbird?
 
-The essential idea to address LOSF problem is packing small objects into a single POSIX file which has been proved in Facebook's [Haystack](https://code.facebook.com/posts/685565858139515/needle-in-a-haystack-efficient-storage-of-billions-of-photos/) and LinkedIn [Ambry](https://github.com/linkedin/ambry). 
+The essential idea to address LOSF problem is packing small objects into a single POSIX file which has been proved in Facebook's [Haystack](https://code.facebook.com/posts/685565858139515/needle-in-a-haystack-efficient-storage-of-billions-of-photos/) and LinkedIn [Ambry](https://github.com/linkedin/ambry).
 
 As we know, Swift uses multiple concurrent WSGI servers to serve requests which makes it is not suitable to implement the idea mentioned above because extra complex concurrent coordination is required.
 
@@ -47,17 +67,17 @@ Finally, we decided to release the project as open source so that any one encoun
 
 This project is licensed under Apache License 2.0. See the [LICENSE](LICENSE) file.
 
-This project may include a number of subcomponents with separate copyright notices and license terms. Your use of these subcomponents is subject to the terms and conditions of the subcomponent's license, as noted in the LICENSE file. 
+This project may include a number of subcomponents with separate copyright notices and license terms. Your use of these subcomponents is subject to the terms and conditions of the subcomponent's license, as noted in the LICENSE file.
 
 # Getting Started
 Since Auklet only implement part of the features of OpenStack Swift, an existing Swift environment is required.
 
-### Prepare a native Swift environment
+## Prepare a native Swift environment
 NOTE: Only kilo version of OpenStack Swift is well tested at the moment!
 
 Auklet may not work properly in [SAIO](https://docs.openstack.org/swift/latest/development_saio.html), so we recommend installing a minimal Swift environment following our [Tiny Swift guide](doc/tiny-swift/README.md) which is more lightweight than SAIO.
 
-### Patch the existing Swift
+## Patch the existing Swift
 There is a workaround to run Auklet with OpenStack Swift without touching the code of Swift. But it is dangerous since it could cause data deleted by Swift object replicator if you are not careful enough. Thus we provide a [patch](patches/pack-policy.patch) to get the job simple.
 
 NOTE: Here we assume that you install Swift environment following our tiny Swift guide exactly.
@@ -69,7 +89,7 @@ sudo patch -p5 < /tmp/pack-policy.patch
 sudo su -c "source /opt/openstack/swift-kilo/bin/activate && swift-init reload all"
 ```
 
-### Deploy Auklet
+## Deploy Auklet
 * Build Auklet following the [dev guild](doc/develop.md).
 
 * Install binary
@@ -104,7 +124,7 @@ sudo mkdir -p /var/log/auklet
 sudo chown swift:swift -R /var/log/auklet
 ```
 
-### Have fun
+## Have fun
 
 * Make sure Swift object server is stopped
 
