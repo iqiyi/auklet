@@ -95,7 +95,7 @@ sudo su -c "source /opt/openstack/swift-kilo/bin/activate && swift-init reload a
 * Install binary
 
 ```
-sudo mv bin/auklet /usr/loca/bin
+sudo mv bin/auklet /usr/local/bin
 sudo mkdir -p /var/run/auklet
 ```
 
@@ -135,7 +135,7 @@ sudo /opt/openstack/swift-kilo/bin/swift-init stop object
 * Start Auklet object server
 
 ```
-sudo /usr/loca/bin/auklet start object -l /etc/swift/zap.yml
+sudo /usr/local/bin/auklet start object -l /etc/swift/zap.yml
 ```
 
 * Create a contaienr
