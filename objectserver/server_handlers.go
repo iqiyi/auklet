@@ -489,7 +489,7 @@ func (s *ObjectServer) ObjDeleteHandler(
 			return
 		}
 		if !obj.Exists() {
-			common.StandardResponse(w, http.StatusPreconditionFailed)
+			common.StandardResponse(w, http.StatusNotFound)
 			return
 		}
 		metadata := obj.Metadata()
