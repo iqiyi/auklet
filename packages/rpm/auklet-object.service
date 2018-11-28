@@ -8,7 +8,7 @@ Type=simple
 LimitNOFILE=102400
 User=swift
 Restart=always
-ExecStart=/usr/local/bin/auklet object -l /etc/hummingbird/zap.yml
+ExecStart=/usr/local/bin/auklet object -l /etc/auklet/zap.yml
 TimeoutStopSec=60
 KillSignal=SIGTERM
 
