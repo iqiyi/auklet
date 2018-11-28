@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
@@ -282,6 +283,21 @@ func (d *PackDevice) commitLO(obj *PackObject, ot PartType) error {
 		return err
 	}
 
+	d.km.Lock(obj.key)
+	defer d.km.Unlock(obj.key)
+	if ot == DATA {
+		old := d.staleObjCopy(obj)
+		err = d.LoadObjectMeta(old)
+		if err == nil && old.exists{
+			oldTs, err1 := strconv.ParseFloat(old.meta.Timestamp, 10)
+			newTs, err2 := strconv.ParseFloat(obj.meta.Timestamp, 10)
+			if err1 == nil && err2 == nil && oldTs >= newTs {
+				afw.Abandon()
+				return nil
+			}
+		}
+	}
+
 	hashDir := filepath.Join(d.objectsDir, obj.key)
 	dst := filepath.Join(hashDir, fmt.Sprintf("%s.%s", obj.meta.Timestamp, ot))
 	if err = afw.Save(dst); err != nil {
@@ -330,6 +346,14 @@ func (d *PackDevice) deepStaleObjCopy(obj *PackObject) *PackObject {
 		small:     obj.dataIndex != nil,
 		dataIndex: obj.dataIndex,
 		metaIndex: obj.metaIndex,
+	}
+}
+
+func (d *PackDevice) staleObjCopy(obj *PackObject) *PackObject {
+	return &PackObject{
+		name:      obj.name,
+		key:       obj.key,
+		partition: obj.partition,
 	}
 }
 
