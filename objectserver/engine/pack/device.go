@@ -23,6 +23,7 @@ import (
 	"github.com/tecbot/gorocksdb"
 	"go.uber.org/zap"
 
+	"github.com/iqiyi/auklet/common"
 	"github.com/iqiyi/auklet/common/conf"
 )
 
@@ -39,6 +40,7 @@ type PackDevice struct {
 	wopt       *gorocksdb.WriteOptions
 	ropt       *gorocksdb.ReadOptions
 	wg         *sync.WaitGroup //garantee a clean exit
+	km         *common.Kmutex
 }
 
 func NewPackDevice(device, driveRoot string, policy int) *PackDevice {
@@ -68,6 +70,7 @@ func NewPackDevice(device, driveRoot string, policy int) *PackDevice {
 		hashSuffix: suffix,
 		bundles:    make(map[string]*Bundle),
 		wg:         &sync.WaitGroup{},
+		km:         common.NewKmutex(),
 	}
 
 	opts := gorocksdb.NewDefaultOptions()

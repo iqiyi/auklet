@@ -29,6 +29,8 @@ mkdir -p %{buildroot}/usr/local/bin
 cp auklet %{buildroot}/usr/local/bin
 install -p -D -m 0644 %{SOURCE10} \
     %{buildroot}%{_unitdir}/auklet-object.service
+install -p -D -m 0644 etc/zap.yml \
+    %{buildroot}/etc/auklet/zap.yml
 
 %pre
 getent group %{auklet_user} > /dev/null || groupadd -r %{auklet_user}
@@ -48,3 +50,4 @@ exit 0
 %files
 /usr/local/bin/auklet
 %{_unitdir}/auklet-object.service
+/etc/auklet/zap.yaml
