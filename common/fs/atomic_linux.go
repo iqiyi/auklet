@@ -39,10 +39,11 @@ import (
 import "C"
 
 var (
-	AT_FDCWD          = C.AT_FDCWD
-	AT_SYMLINK_FOLLOW = C.AT_SYMLINK_FOLLOW
-	O_TMPFILE         = C.__O_TMPFILE | syscall.O_DIRECTORY
-	useOTempfile      = false
+	AT_FDCWD            = C.AT_FDCWD
+	AT_SYMLINK_FOLLOW   = C.AT_SYMLINK_FOLLOW
+	O_TMPFILE           = C.__O_TMPFILE | syscall.O_DIRECTORY
+	useOTempfile        = false
+	FileMaxUnsynedBytes = 4 * 1024 * 1024
 )
 
 func init() {
@@ -64,8 +65,7 @@ func init() {
 		}
 	}
 	// Linux 3.15 is where XFS got O_TMPFILE support.
-	useOTempfile = (linuxMajorVersion > 3 ||
-		(linuxMajorVersion == 3 && linuxMinorVersion >= 15))
+	useOTempfile = linuxMajorVersion > 3 || (linuxMajorVersion == 3 && linuxMinorVersion >= 15)
 }
 
 func linkat(fd uintptr, dst string) error {
@@ -86,9 +86,21 @@ func linkat(fd uintptr, dst string) error {
 // otherwise by writing to a temp directory and renaming.
 type TempFile struct {
 	*os.File
-	tempDir   string
-	saved     bool
-	otempfile bool
+	tempDir      string
+	saved        bool
+	otempfile    bool
+	unSyncedSize int
+}
+
+// Write temp file with sync mode
+func (o *TempFile) Write(b []byte) (int, error) {
+	nw, err := o.File.Write(b)
+	o.unSyncedSize += nw
+	if o.unSyncedSize >= FileMaxUnsynedBytes {
+		o.File.Sync()
+		o.unSyncedSize = 0
+	}
+	return nw, err
 }
 
 // Abandon removes any resources associated with this file,
@@ -163,10 +175,11 @@ func NewAtomicFileWriter(
 		tempFile, err := os.OpenFile(dstDir, O_TMPFILE|os.O_RDWR, 0660)
 		if err == nil {
 			return &TempFile{
-				File:      tempFile,
-				tempDir:   tempDir,
-				saved:     false,
-				otempfile: true}, nil
+				File:         tempFile,
+				tempDir:      tempDir,
+				saved:        false,
+				otempfile:    true,
+				unSyncedSize: 0}, nil
 		}
 	}
 	if err := os.MkdirAll(tempDir, 0770); err != nil {
@@ -177,8 +190,9 @@ func NewAtomicFileWriter(
 		return nil, err
 	}
 	return &TempFile{
-		File:      tempFile,
-		tempDir:   tempDir,
-		saved:     false,
-		otempfile: false}, nil
+		File:         tempFile,
+		tempDir:      tempDir,
+		saved:        false,
+		otempfile:    false,
+		unSyncedSize: 0}, nil
 }
