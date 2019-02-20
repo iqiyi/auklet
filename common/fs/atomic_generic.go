@@ -24,11 +24,25 @@ import (
 	"path/filepath"
 )
 
+var FileMaxUnsynedBytes = 4 * 1024 * 1024
+
 // TempFile implements an atomic file write by writing to a temp
 // directory and then renaming into place.
 type TempFile struct {
 	*os.File
-	saved bool
+	saved        bool
+	unSyncedSize int
+}
+
+// Write temp file with sync mode
+func (o *TempFile) Write(b []byte) (int, error) {
+	nw, err := o.File.Write(b)
+	o.unSyncedSize += nw
+	if o.unSyncedSize >= FileMaxUnsynedBytes {
+		o.File.Sync()
+		o.unSyncedSize = 0
+	}
+	return nw, err
 }
 
 // Abandon removes any resources associated with this file,
@@ -75,5 +89,5 @@ func NewAtomicFileWriter(
 	if err != nil {
 		return nil, err
 	}
-	return &TempFile{File: tempFile}, nil
+	return &TempFile{File: tempFile, saved: false, unSyncedSize: 0}, nil
 }
