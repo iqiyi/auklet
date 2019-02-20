@@ -353,6 +353,8 @@ func (s *ObjectServer) ObjPutHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	outHeaders.Set(common.HEtag, metadata[common.HEtag])
+	outHeaders.Set(common.XTimestamp, metadata[common.XTimestamp])
+	outHeaders.Set(common.XBackendTimestamp, metadata[common.XTimestamp])  //FIXME: No Offset Process here
 
 	if err := obj.Commit(metadata); err != nil {
 		s.logger.Error("unable to commit object", zap.Error(err))
